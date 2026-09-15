@@ -130,17 +130,22 @@ if start_pressed:
             table_placeholder.dataframe(df_current, use_container_width=True)
             
         try:
-            asyncio.run(
-                scraper_engine.run_scraper_task(
-                    niche=niche.strip(),
-                    location=location.strip(),
-                    max_leads_per_query=max_leads,
-                    use_variations=use_variations,
-                    master_file=MASTER_FILE,
-                    log_fn=on_log,
-                    lead_fn=on_lead
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                loop.run_until_complete(
+                    scraper_engine.run_scraper_task(
+                        niche=niche.strip(),
+                        location=location.strip(),
+                        max_leads_per_query=max_leads,
+                        use_variations=use_variations,
+                        master_file=MASTER_FILE,
+                        log_fn=on_log,
+                        lead_fn=on_lead
+                    )
                 )
-            )
+            finally:
+                loop.close()
             status_box.update(label="🎉 Scraping Finished Successfully!", state="complete", expanded=False)
         except Exception as e:
             status_box.update(label=f"❌ Error occurred: {e}", state="error", expanded=True)
