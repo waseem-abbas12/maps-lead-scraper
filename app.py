@@ -1,252 +1,181 @@
 import os
 import sys
-
-# If executed via Streamlit Cloud
-try:
-    import streamlit as st
-    from streamlit.runtime.scriptrunner import get_script_run_ctx
-    if get_script_run_ctx() is not None:
-        import runpy
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        runpy.run_path(os.path.join(script_dir, "streamlit_app.py"), run_name="__main__")
-        st.stop()
-except Exception:
-    pass
-
 import asyncio
-import hashlib
+import subprocess
 import pandas as pd
-from typing import Optional, List
-from fastapi import FastAPI, Request, Response, Form, HTTPException, Depends, status
-from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse, JSONResponse
-from fastapi.templating import Jinja2Templates
-from pydantic import BaseModel
-from dotenv import load_dotenv
-
+import streamlit as st
 import scraper_engine
 
-load_dotenv()
+# 1. Page Configuration
+st.set_page_config(
+    page_title="Global Google Maps Lead Scraper",
+    page_icon="🌍",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
-ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
-ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "leads@secret2026")
-SECRET_KEY = os.getenv("SECRET_KEY", "super-secret-leads-key-998811")
-MASTER_FILE = os.getenv("MASTER_FILE", "Master_Leads_Database.csv")
-INVITATION_CODES = [c.strip().upper() for c in os.getenv("INVITATION_CODES", "LEAD-PRO-2026,VIP2026,ADMIN,LEAD2026").split(",") if c.strip()]
+# 2. Ensure Playwright Chromium is installed on Cloud (lazy setup)
+@st.cache_resource
+def setup_playwright():
+    try:
+        subprocess.run(["playwright", "install", "chromium"], check=False)
+    except Exception:
+        pass
+    return True
 
-def make_token(username: str) -> str:
-    return hashlib.sha256(f"{username}:{SECRET_KEY}".encode()).hexdigest()
+# 3. Simple Authentication Check
+INVITATION_CODES = [c.strip().upper() for c in os.getenv("INVITATION_CODES", "LEAD-PRO-2026,VIP2026,ADMIN,LEAD2026,leads@secret2026").split(",") if c.strip()]
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
 
-app = FastAPI(title="Global Maps Lead Scraper")
-templates = Jinja2Templates(directory="templates")
+if not st.session_state.authenticated:
+    st.markdown("""
+        <div style="text-align: center; padding: 2.5rem 1rem;">
+            <div style="font-size: 3.5rem; margin-bottom: 0.5rem;">🌍</div>
+            <h1 style="font-size: 2rem; font-weight: 800; margin-bottom: 0.25rem;">Maps Lead Scraper Pro</h1>
+            <p style="color: #94a3b8; font-size: 0.95rem;">Exclusive Google Maps Dual Extractor (Phones + Gmails)</p>
+            <div style="display: inline-block; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); color: #10b981; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; margin-top: 0.5rem;">
+                🎟️ Private Access Only
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    col_a, col_b, col_c = st.columns([1, 2, 1])
+    with col_b:
+        code_input = st.text_input("Enter Secret Invitation Code:", placeholder="e.g. LEAD-PRO-2026", type="password")
+        if st.button("🚀 Unlock Dashboard", type="primary", use_container_width=True):
+            if code_input.strip().upper() in INVITATION_CODES or code_input.strip() == "leads@secret2026":
+                st.session_state.authenticated = True
+                st.rerun()
+            else:
+                st.error("❌ Invalid Invitation Code. Please contact administrator.")
+        st.caption("Default Access Code: `LEAD-PRO-2026`")
+    st.stop()
 
-# Global Scraper State
-class ScraperState:
-    is_running: bool = False
-    stop_event: Optional[asyncio.Event] = None
-    task: Optional[asyncio.Task] = None
-    logs: List[str] = []
-    session_leads: List[dict] = []
-    emails_found: int = 0
-    phones_found: int = 0
-    last_log_idx: int = 0
+# 4. Session State for Leads & Logs
+if "scraped_leads" not in st.session_state:
+    st.session_state.scraped_leads = []
+if "logs" not in st.session_state:
+    st.session_state.logs = []
+if "is_running" not in st.session_state:
+    st.session_state.is_running = False
 
-state = ScraperState()
+MASTER_FILE = "Master_Leads_Database.csv"
 
-def get_current_user(request: Request) -> Optional[str]:
-    cookie = request.cookies.get("lead_auth_session")
-    if not cookie:
-        return None
-    if cookie == make_token(ADMIN_USERNAME):
-        return ADMIN_USERNAME
-    for code in INVITATION_CODES:
-        if cookie == make_token(f"invite_{code}"):
-            return f"Member ({code})"
-    return None
-
-def require_auth(request: Request):
-    user = get_current_user(request)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_307_TEMPORARY_REDIRECT,
-            headers={"Location": "/login"}
-        )
-    return user
-
-@app.exception_handler(HTTPException)
-async def http_exception_handler(request: Request, exc: HTTPException):
-    if exc.status_code in (301, 302, 303, 307) and "Location" in exc.headers:
-        return RedirectResponse(url=exc.headers["Location"], status_code=303)
-    return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
-
-@app.get("/login", response_class=HTMLResponse)
-async def login_page(request: Request):
-    if get_current_user(request):
-        return RedirectResponse("/", status_code=303)
-    return templates.TemplateResponse(request=request, name="login.html", context={"error": None})
-
-@app.post("/login", response_class=HTMLResponse)
-async def login_submit(
-    request: Request,
-    invite_code: Optional[str] = Form(None),
-    username: Optional[str] = Form(None),
-    password: Optional[str] = Form(None)
-):
-    # Check Invitation Code
-    if invite_code and invite_code.strip().upper() in INVITATION_CODES:
-        token = make_token(f"invite_{invite_code.strip().upper()}")
-        response = RedirectResponse("/", status_code=303)
-        response.set_cookie(
-            key="lead_auth_session",
-            value=token,
-            max_age=60 * 60 * 24 * 7,
-            httponly=True,
-            samesite="lax"
-        )
-        return response
-
-    # Check Username / Password if provided
-    if username and password and username.strip() == ADMIN_USERNAME and password.strip() == ADMIN_PASSWORD:
-        token = make_token(ADMIN_USERNAME)
-        response = RedirectResponse("/", status_code=303)
-        response.set_cookie(
-            key="lead_auth_session",
-            value=token,
-            max_age=60 * 60 * 24 * 7,
-            httponly=True,
-            samesite="lax"
-        )
-        return response
-
-    return templates.TemplateResponse(request=request, name="login.html", context={
-        "error": "Invalid Invitation Code. Please verify your code and try again."
-    })
-
-@app.get("/logout")
-async def logout():
-    response = RedirectResponse("/login", status_code=303)
-    response.delete_cookie("lead_auth_session")
-    return response
-
-@app.get("/", response_class=HTMLResponse)
-async def dashboard(request: Request, user: str = Depends(require_auth)):
-    total_leads = 0
+# 5. Sidebar
+with st.sidebar:
+    st.image("https://cdn-icons-png.flaticon.com/512/854/854878.png", width=70)
+    st.title("Settings & Stats")
+    
+    total_in_db = 0
     if os.path.exists(MASTER_FILE):
         try:
-            df = pd.read_csv(MASTER_FILE)
-            total_leads = len(df)
+            m_df = pd.read_csv(MASTER_FILE)
+            total_in_db = len(m_df)
         except Exception:
             pass
-    return templates.TemplateResponse(request=request, name="dashboard.html", context={
-        "username": user,
-        "total_leads": total_leads
-    })
-
-class ScrapeRequest(BaseModel):
-    niche: str
-    location: str = ""
-    max_leads: int = 25
-    variations: bool = True
-
-async def background_worker(niche: str, location: str, max_leads: int, variations: bool):
-    state.is_running = True
-    state.stop_event = asyncio.Event()
-    state.logs.clear()
-    state.session_leads.clear()
-    state.emails_found = 0
-    state.phones_found = 0
-    state.last_log_idx = 0
-
-    def log_cb(msg: str):
-        state.logs.append(msg)
-
-    def lead_cb(lead: dict):
-        state.session_leads.append(lead)
-        if lead.get("Email / Gmail") and lead.get("Email / Gmail") != "Not Found":
-            state.emails_found += 1
-        if lead.get("Phone Number") and lead.get("Phone Number") != "Not Found":
-            state.phones_found += 1
-
-    try:
-        await scraper_engine.run_scraper_task(
-            niche=niche,
-            location=location,
-            max_leads_per_query=max_leads,
-            use_variations=variations,
-            master_file=MASTER_FILE,
-            log_fn=log_cb,
-            lead_fn=lead_cb,
-            stop_event=state.stop_event
-        )
-    except Exception as e:
-        state.logs.append(f"❌ Worker crashed: {e}")
-    finally:
-        state.is_running = False
-
-@app.post("/api/scrape")
-async def start_scrape(data: ScrapeRequest, user: str = Depends(require_auth)):
-    if state.is_running:
-        raise HTTPException(status_code=400, detail="A scraping task is already running!")
+            
+    st.metric("Total Master Leads", f"{total_in_db:,}")
     
-    if not data.niche.strip():
-        raise HTTPException(status_code=400, detail="Niche category is required!")
+    if os.path.exists(MASTER_FILE) and total_in_db > 0:
+        with open(MASTER_FILE, "rb") as f:
+            st.download_button(
+                label="📥 Download Master Database",
+                data=f,
+                file_name="Master_Leads_Database.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
+            
+    st.divider()
+    if st.button("🚪 Logout"):
+        st.session_state.authenticated = False
+        st.rerun()
+
+# 6. Main Dashboard
+st.title("🌍 Global Google Maps Lead Scraper")
+st.caption("Extract direct Business Names, Phone Numbers, Websites, Addresses & Emails from Google Maps.")
+
+col1, col2 = st.columns([1, 1])
+
+with col1:
+    niche = st.text_input("🎯 Business Category / Niche", placeholder="e.g. Real Estate, Restaurant, Gym, Dentist")
+    max_leads = st.slider("📊 Max leads per query variation", min_value=5, max_value=60, value=20, step=5)
+
+with col2:
+    location = st.text_input("📍 City / Country / Area", placeholder="e.g. Faisalabad, London, New York, Dubai")
+    use_variations = st.checkbox("🧠 Smart Query Variations (Extract 3x-5x more leads)", value=True)
+
+# 7. Start / Stop Actions
+btn_col1, btn_col2 = st.columns([1, 4])
+
+start_pressed = btn_col1.button("🚀 Start Scraping", type="primary", disabled=st.session_state.is_running)
+
+# Metrics Row
+m_col1, m_col2, m_col3 = st.columns(3)
+metric_leads = m_col1.metric("Leads Scraped", len(st.session_state.scraped_leads))
+metric_emails = m_col2.metric("Emails / Gmails Found", sum(1 for x in st.session_state.scraped_leads if x.get("Email / Gmail") not in [None, "Not Found"]))
+metric_phones = m_col3.metric("Phone Numbers Found", sum(1 for x in st.session_state.scraped_leads if x.get("Phone Number") not in [None, "Not Found"]))
+
+# 8. Execution Logic
+if start_pressed:
+    if not niche.strip() or not location.strip():
+        st.warning("⚠️ Please provide both Category and Location before starting.")
+    else:
+        st.session_state.is_running = True
+        st.session_state.scraped_leads = []
+        st.session_state.logs = []
         
-    state.task = asyncio.create_task(
-        background_worker(data.niche, data.location, data.max_leads, data.variations)
-    )
-    return {"status": "started", "message": f"Scraping started for {data.niche}"}
-
-@app.post("/api/stop")
-async def stop_scrape(user: str = Depends(require_auth)):
-    if state.is_running and state.stop_event:
-        state.stop_event.set()
-        return {"status": "stopping", "message": "Stop signal sent"}
-    return {"status": "idle", "message": "No active scraping task"}
-
-@app.get("/api/status")
-async def get_status(user: str = Depends(require_auth)):
-    new_logs = state.logs[state.last_log_idx:]
-    state.last_log_idx = len(state.logs)
-    
-    total_db_leads = 0
-    if os.path.exists(MASTER_FILE):
+        status_box = st.status("🚀 Scraping in progress...", expanded=True)
+        setup_playwright()
+        log_placeholder = st.empty()
+        table_placeholder = st.empty()
+        
+        def on_log(msg):
+            st.session_state.logs.append(msg)
+            # keep last 15 lines
+            log_placeholder.code("\n".join(st.session_state.logs[-15:]), language="text")
+            
+        def on_lead(lead):
+            st.session_state.scraped_leads.append(lead)
+            df_current = pd.DataFrame(st.session_state.scraped_leads)
+            table_placeholder.dataframe(df_current, use_container_width=True)
+            
         try:
-            total_db_leads = len(pd.read_csv(MASTER_FILE))
-        except Exception:
-            pass
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                loop.run_until_complete(
+                    scraper_engine.run_scraper_task(
+                        niche=niche.strip(),
+                        location=location.strip(),
+                        max_leads_per_query=max_leads,
+                        use_variations=use_variations,
+                        master_file=MASTER_FILE,
+                        log_fn=on_log,
+                        lead_fn=on_lead
+                    )
+                )
+            finally:
+                loop.close()
+            status_box.update(label="🎉 Scraping Finished Successfully!", state="complete", expanded=False)
+        except Exception as e:
+            status_box.update(label=f"❌ Error occurred: {e}", state="error", expanded=True)
+        finally:
+            st.session_state.is_running = False
+            st.rerun()
 
-    return {
-        "is_running": state.is_running,
-        "new_logs": new_logs,
-        "session_leads_count": len(state.session_leads),
-        "emails_found_count": state.emails_found,
-        "phones_found_count": state.phones_found,
-        "total_db_leads": total_db_leads
-    }
-
-@app.get("/api/leads")
-async def get_leads(user: str = Depends(require_auth)):
-    if not os.path.exists(MASTER_FILE):
-        return []
-    try:
-        df = pd.read_csv(MASTER_FILE)
-        # return the latest 100 leads reversed
-        records = df.tail(100).iloc[::-1].fillna("").to_dict(orient="records")
-        return records
-    except Exception as e:
-        return []
-
-@app.get("/api/download")
-async def download_csv(user: str = Depends(require_auth)):
-    if not os.path.exists(MASTER_FILE):
-        raise HTTPException(status_code=404, detail="Database file not found yet.")
-    return FileResponse(
-        path=MASTER_FILE,
-        filename="Master_Leads_Database.csv",
-        media_type="text/csv"
+# 9. Results Table & Download
+if st.session_state.scraped_leads:
+    st.subheader("📋 Scraped Leads Results")
+    res_df = pd.DataFrame(st.session_state.scraped_leads)
+    st.dataframe(res_df, use_container_width=True)
+    
+    csv_data = res_df.to_csv(index=False).encode('utf-8-sig')
+    st.download_button(
+        label="📥 Download This Search Results (CSV)",
+        data=csv_data,
+        file_name=f"{niche}_{location}_leads.csv".replace(" ", "_").lower(),
+        mime="text/csv",
+        type="primary"
     )
-
-if __name__ == "__main__":
-    import uvicorn
-    port = int(os.getenv("PORT", 8000))
-    print(f"Server starting on http://localhost:{port}")
-    uvicorn.run(app, host="0.0.0.0", port=port)
