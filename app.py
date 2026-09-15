@@ -29,6 +29,7 @@ ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "leads@secret2026")
 SECRET_KEY = os.getenv("SECRET_KEY", "super-secret-leads-key-998811")
 MASTER_FILE = os.getenv("MASTER_FILE", "Master_Leads_Database.csv")
+INVITATION_CODES = [c.strip().upper() for c in os.getenv("INVITATION_CODES", "LEAD-PRO-2026,VIP2026,ADMIN,LEAD2026").split(",") if c.strip()]
 
 def make_token(username: str) -> str:
     return hashlib.sha256(f"{username}:{SECRET_KEY}".encode()).hexdigest()
@@ -53,9 +54,11 @@ def get_current_user(request: Request) -> Optional[str]:
     cookie = request.cookies.get("lead_auth_session")
     if not cookie:
         return None
-    expected = make_token(ADMIN_USERNAME)
-    if cookie == expected:
+    if cookie == make_token(ADMIN_USERNAME):
         return ADMIN_USERNAME
+    for code in INVITATION_CODES:
+        if cookie == make_token(f"invite_{code}"):
+            return f"Member ({code})"
     return None
 
 def require_auth(request: Request):
@@ -80,20 +83,40 @@ async def login_page(request: Request):
     return templates.TemplateResponse(request=request, name="login.html", context={"error": None})
 
 @app.post("/login", response_class=HTMLResponse)
-async def login_submit(request: Request, username: str = Form(...), password: str = Form(...)):
-    if username.strip() == ADMIN_USERNAME and password.strip() == ADMIN_PASSWORD:
-        token = make_token(username.strip())
+async def login_submit(
+    request: Request,
+    invite_code: Optional[str] = Form(None),
+    username: Optional[str] = Form(None),
+    password: Optional[str] = Form(None)
+):
+    # Check Invitation Code
+    if invite_code and invite_code.strip().upper() in INVITATION_CODES:
+        token = make_token(f"invite_{invite_code.strip().upper()}")
         response = RedirectResponse("/", status_code=303)
         response.set_cookie(
             key="lead_auth_session",
             value=token,
-            max_age=60 * 60 * 24 * 7, # 7 days
+            max_age=60 * 60 * 24 * 7,
             httponly=True,
             samesite="lax"
         )
         return response
+
+    # Check Username / Password if provided
+    if username and password and username.strip() == ADMIN_USERNAME and password.strip() == ADMIN_PASSWORD:
+        token = make_token(ADMIN_USERNAME)
+        response = RedirectResponse("/", status_code=303)
+        response.set_cookie(
+            key="lead_auth_session",
+            value=token,
+            max_age=60 * 60 * 24 * 7,
+            httponly=True,
+            samesite="lax"
+        )
+        return response
+
     return templates.TemplateResponse(request=request, name="login.html", context={
-        "error": "Invalid username or password. Please try again."
+        "error": "Invalid Invitation Code. Please verify your code and try again."
     })
 
 @app.get("/logout")

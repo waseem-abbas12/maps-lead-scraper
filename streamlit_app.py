@@ -26,19 +26,32 @@ def setup_playwright():
 setup_playwright()
 
 # 3. Simple Authentication Check
-DEFAULT_PASSWORD = os.getenv("ADMIN_PASSWORD", "leads@secret2026")
+INVITATION_CODES = [c.strip().upper() for c in os.getenv("INVITATION_CODES", "LEAD-PRO-2026,VIP2026,ADMIN,LEAD2026,leads@secret2026").split(",") if c.strip()]
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
 
 if not st.session_state.authenticated:
-    st.title("🔒 Login Required")
-    pwd = st.text_input("Enter Access Password:", type="password")
-    if st.button("Login", type="primary"):
-        if pwd == DEFAULT_PASSWORD or pwd == "admin":
-            st.session_state.authenticated = True
-            st.rerun()
-        else:
-            st.error("Invalid password. Please try again.")
+    st.markdown("""
+        <div style="text-align: center; padding: 2.5rem 1rem;">
+            <div style="font-size: 3.5rem; margin-bottom: 0.5rem;">🌍</div>
+            <h1 style="font-size: 2rem; font-weight: 800; margin-bottom: 0.25rem;">Maps Lead Scraper Pro</h1>
+            <p style="color: #94a3b8; font-size: 0.95rem;">Exclusive Google Maps Dual Extractor (Phones + Gmails)</p>
+            <div style="display: inline-block; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); color: #10b981; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; margin-top: 0.5rem;">
+                🎟️ Private Access Only
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    col_a, col_b, col_c = st.columns([1, 2, 1])
+    with col_b:
+        code_input = st.text_input("Enter Secret Invitation Code:", placeholder="e.g. LEAD-PRO-2026", type="password")
+        if st.button("🚀 Unlock Dashboard", type="primary", use_container_width=True):
+            if code_input.strip().upper() in INVITATION_CODES or code_input.strip() == "leads@secret2026":
+                st.session_state.authenticated = True
+                st.rerun()
+            else:
+                st.error("❌ Invalid Invitation Code. Please contact administrator.")
+        st.caption("Default Access Code: `LEAD-PRO-2026`")
     st.stop()
 
 # 4. Session State for Leads & Logs

@@ -3,49 +3,76 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Global Maps Lead Scraper</title>
+    <title>Access Portal - Global Maps Lead Scraper Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>body { font-family: 'Inter', sans-serif; }</style>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .glass {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+    </style>
 </head>
-<body class="bg-slate-950 text-slate-100 flex items-center justify-center min-h-screen px-4">
-    <div class="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-8 backdrop-blur-sm">
+<body class="bg-slate-950 text-slate-100 flex items-center justify-center min-h-screen px-4 relative overflow-hidden">
+    <!-- Ambient Background Glow -->
+    <div class="absolute -top-40 -left-40 w-96 h-96 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="absolute -bottom-40 -right-40 w-96 h-96 bg-teal-500/20 rounded-full blur-3xl pointer-events-none"></div>
+
+    <div class="w-full max-w-md glass rounded-3xl shadow-2xl p-8 sm:p-10 relative z-10">
+        <!-- Logo & Header -->
         <div class="text-center mb-8">
-            <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 text-white text-3xl font-bold shadow-lg shadow-emerald-500/20 mb-4">
+            <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 text-white text-3xl shadow-xl shadow-emerald-500/25 mb-4 transform hover:rotate-6 transition">
                 🌍
             </div>
-            <h1 class="text-2xl font-bold tracking-tight text-white">Lead Scraper Portal</h1>
-            <p class="text-slate-400 text-sm mt-1">Authorized Personnel Only</p>
+            <h1 class="text-2xl font-extrabold tracking-tight text-white">Maps Lead Scraper Pro</h1>
+            <p class="text-slate-400 text-sm mt-1.5">Exclusive Lead Generation & Email Extraction Portal</p>
+            
+            <div class="mt-3 inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                <span>Private Access Only</span>
+            </div>
         </div>
 
         {% if error %}
-        <div class="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-center space-x-2">
-            <span>⚠️</span>
-            <span>{{ error }}</span>
+        <div class="mb-6 p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-center space-x-2.5">
+            <span class="text-base">⚠️</span>
+            <span class="font-medium">{{ error }}</span>
         </div>
         {% endif %}
 
+        <!-- Access Form -->
         <form method="POST" action="/login" class="space-y-5">
             <div>
-                <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Username</label>
-                <input type="text" name="username" required autofocus placeholder="Enter your username"
-                    class="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition">
-            </div>
-
-            <div>
-                <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Password / Access Key</label>
-                <input type="password" name="password" required placeholder="••••••••••••"
-                    class="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition">
+                <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2 flex items-center justify-between">
+                    <span>🎟️ Invitation Code / Access Key</span>
+                    <span class="text-[10px] text-slate-500 font-normal">Case-insensitive</span>
+                </label>
+                <div class="relative">
+                    <input type="text" name="invite_code" required autofocus placeholder="e.g. LEAD-PRO-2026"
+                        class="w-full px-4 py-3.5 bg-slate-900/90 border border-slate-700/80 rounded-2xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition font-mono tracking-wide text-center uppercase text-base">
+                </div>
+                <p class="text-[11px] text-slate-400 mt-2 text-center">
+                    Enter the secret invitation code provided by the administrator.
+                </p>
             </div>
 
             <button type="submit"
-                class="w-full py-3.5 px-4 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-semibold rounded-xl shadow-lg shadow-emerald-500/25 transition transform active:scale-[0.98]">
-                Sign In to Dashboard
+                class="w-full py-4 px-4 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white font-bold rounded-2xl shadow-xl shadow-emerald-500/20 hover:shadow-emerald-500/40 transition transform active:scale-[0.98] text-sm tracking-wide">
+                🚀 Unlock & Enter Dashboard
             </button>
         </form>
 
-        <div class="mt-8 pt-6 border-t border-slate-800 text-center text-xs text-slate-500">
-            Protected & Encrypted • High-Performance Lead Extraction
+        <!-- Footer Note -->
+        <div class="mt-8 pt-6 border-t border-slate-800/80 text-center">
+            <p class="text-xs text-slate-400">
+                Default Invite Code: <code class="text-emerald-400 font-bold bg-slate-800 px-2 py-0.5 rounded">LEAD-PRO-2026</code>
+            </p>
+            <p class="text-[11px] text-slate-500 mt-2">
+                High-Performance Dual Scraper • Fast Phone & Gmail Extraction
+            </p>
         </div>
     </div>
 </body>
