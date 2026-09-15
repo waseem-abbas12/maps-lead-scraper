@@ -23,8 +23,6 @@ def setup_playwright():
         pass
     return True
 
-setup_playwright()
-
 # 3. Simple Authentication Check
 INVITATION_CODES = [c.strip().upper() for c in os.getenv("INVITATION_CODES", "LEAD-PRO-2026,VIP2026,ADMIN,LEAD2026,leads@secret2026").split(",") if c.strip()]
 if "authenticated" not in st.session_state:
@@ -129,6 +127,7 @@ if start_pressed:
         st.session_state.logs = []
         
         status_box = st.status("🚀 Scraping in progress...", expanded=True)
+        setup_playwright()
         log_placeholder = st.empty()
         table_placeholder = st.empty()
         

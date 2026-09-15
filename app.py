@@ -6,8 +6,10 @@ try:
     import streamlit as st
     from streamlit.runtime.scriptrunner import get_script_run_ctx
     if get_script_run_ctx() is not None:
-        import streamlit_app
-        sys.exit(0)
+        import runpy
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        runpy.run_path(os.path.join(script_dir, "streamlit_app.py"), run_name="__main__")
+        st.stop()
 except Exception:
     pass
 
