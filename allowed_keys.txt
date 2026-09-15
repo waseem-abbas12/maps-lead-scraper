@@ -1,0 +1,10 @@
+# ============================================================
+# MAPS LEAD SCRAPER - AUTHORIZED ACCESS KEYS
+# ============================================================
+# Har line par aik secret access code likhein.
+# Jis person ko aap access dena chahein, usay yahan se code copy kar ke dein.
+# Jab kisi ka access khatam karna ho, to bas uski line delete kar dein!
+
+LEAD-PRO-2026
+CLIENT-ACCESS-786
+VIP-AGENT-99

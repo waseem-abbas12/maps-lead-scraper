@@ -18,7 +18,27 @@ ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "leads@secret2026")
 SECRET_KEY = os.getenv("SECRET_KEY", "super-secret-leads-key-998811")
 MASTER_FILE = os.getenv("MASTER_FILE", "Master_Leads_Database.csv")
-INVITATION_CODES = [c.strip().upper() for c in os.getenv("INVITATION_CODES", "LEAD-PRO-2026,VIP2026,ADMIN,LEAD2026").split(",") if c.strip()]
+
+def get_allowed_keys() -> set:
+    keys = set()
+    # Read from environment
+    env_codes = os.getenv("INVITATION_CODES", "")
+    for c in env_codes.split(","):
+        if c.strip():
+            keys.add(c.strip().upper())
+    # Read from allowed_keys.txt
+    if os.path.exists("allowed_keys.txt"):
+        try:
+            with open("allowed_keys.txt", "r", encoding="utf-8") as f:
+                for line in f:
+                    clean = line.strip()
+                    if clean and not clean.startswith("#"):
+                        keys.add(clean.upper())
+        except Exception:
+            pass
+    if not keys:
+        keys.add("LEAD-PRO-2026")
+    return keys
 
 def make_token(username: str) -> str:
     return hashlib.sha256(f"{username}:{SECRET_KEY}".encode()).hexdigest()
@@ -45,7 +65,7 @@ def get_current_user(request: Request) -> Optional[str]:
         return None
     if cookie == make_token(ADMIN_USERNAME):
         return ADMIN_USERNAME
-    for code in INVITATION_CODES:
+    for code in get_allowed_keys():
         if cookie == make_token(f"invite_{code}"):
             return f"Member ({code})"
     return None
@@ -78,9 +98,10 @@ async def login_submit(
     username: Optional[str] = Form(None),
     password: Optional[str] = Form(None)
 ):
-    # Check Invitation Code
-    if invite_code and invite_code.strip().upper() in INVITATION_CODES:
-        token = make_token(f"invite_{invite_code.strip().upper()}")
+    # Check Invitation Code against allowed keys
+    if invite_code and invite_code.strip().upper() in get_allowed_keys():
+        code_clean = invite_code.strip().upper()
+        token = make_token(f"invite_{code_clean}")
         response = RedirectResponse("/", status_code=303)
         response.set_cookie(
             key="lead_auth_session",
@@ -105,7 +126,7 @@ async def login_submit(
         return response
 
     return templates.TemplateResponse(request=request, name="login.html", context={
-        "error": "Invalid Invitation Code. Please verify your code and try again."
+        "error": "Invalid or unauthorized access key. Access denied."
     })
 
 @app.get("/logout")
@@ -132,10 +153,17 @@ class ScrapeRequest(BaseModel):
     niche: str
     location: str
     max_leads: int = 25
-    use_variations: bool = True
+    use_variations: Optional[bool] = True
+    variations: Optional[bool] = None
 
-@app.post("/api/start")
-async def start_scraping(req: ScrapeRequest, user: str = Depends(require_auth)):
+    def get_variations_flag(self) -> bool:
+        if self.variations is not None:
+            return self.variations
+        if self.use_variations is not None:
+            return self.use_variations
+        return True
+
+async def _start_scraping_handler(req: ScrapeRequest):
     if state.is_running:
         return {"status": "already_running", "message": "A scrape job is already active."}
         
@@ -163,7 +191,7 @@ async def start_scraping(req: ScrapeRequest, user: str = Depends(require_auth)):
                 niche=req.niche.strip(),
                 location=req.location.strip(),
                 max_leads_per_query=req.max_leads,
-                use_variations=req.use_variations,
+                use_variations=req.get_variations_flag(),
                 master_file=MASTER_FILE,
                 log_fn=append_log,
                 lead_fn=append_lead,
@@ -177,6 +205,14 @@ async def start_scraping(req: ScrapeRequest, user: str = Depends(require_auth)):
     state.task = asyncio.create_task(worker())
     return {"status": "started", "message": "Scraper initialized successfully."}
 
+@app.post("/api/start")
+async def start_scraping(req: ScrapeRequest, user: str = Depends(require_auth)):
+    return await _start_scraping_handler(req)
+
+@app.post("/api/scrape")
+async def scrape_alias(req: ScrapeRequest, user: str = Depends(require_auth)):
+    return await _start_scraping_handler(req)
+
 @app.post("/api/stop")
 async def stop_scraping(user: str = Depends(require_auth)):
     if state.is_running and state.stop_event:
@@ -189,14 +225,40 @@ async def stop_scraping(user: str = Depends(require_auth)):
 async def get_status(user: str = Depends(require_auth)):
     new_logs = state.logs[state.last_log_idx:]
     state.last_log_idx = len(state.logs)
+    
+    total_db_leads = 0
+    if os.path.exists(MASTER_FILE):
+        try:
+            total_db_leads = len(pd.read_csv(MASTER_FILE))
+        except Exception:
+            pass
+
     return {
         "is_running": state.is_running,
         "logs": new_logs,
+        "new_logs": new_logs,
         "total_leads_scraped": len(state.session_leads),
+        "session_leads_count": len(state.session_leads),
         "emails_found": state.emails_found,
+        "emails_found_count": state.emails_found,
         "phones_found": state.phones_found,
-        "recent_leads": state.session_leads[-10:] if state.session_leads else []
+        "phones_found_count": state.phones_found,
+        "total_db_leads": total_db_leads,
+        "recent_leads": state.session_leads[-15:] if state.session_leads else []
     }
+
+@app.get("/api/session-leads")
+async def get_session_leads(user: str = Depends(require_auth)):
+    return state.session_leads[::-1]
+
+@app.get("/api/download-session")
+async def download_session_csv(user: str = Depends(require_auth)):
+    if not state.session_leads:
+        raise HTTPException(status_code=400, detail="No leads scraped in current session yet.")
+    df = pd.DataFrame(state.session_leads)
+    temp_file = "Current_Session_Leads.csv"
+    df.to_csv(temp_file, index=False, encoding="utf-8-sig")
+    return FileResponse(path=temp_file, filename="Current_Session_Leads.csv", media_type="text/csv")
 
 @app.get("/api/leads")
 async def get_leads(user: str = Depends(require_auth)):
