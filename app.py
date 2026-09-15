@@ -1,5 +1,16 @@
 import os
 import sys
+
+# If executed via Streamlit Cloud
+try:
+    import streamlit as st
+    from streamlit.runtime.scriptrunner import get_script_run_ctx
+    if get_script_run_ctx() is not None:
+        import streamlit_app
+        sys.exit(0)
+except Exception:
+    pass
+
 import asyncio
 import hashlib
 import pandas as pd
