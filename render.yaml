@@ -1,7 +1,8 @@
 services:
   - type: web
     name: maps-lead-scraper
-    env: docker
+    runtime: docker
+    dockerfilePath: ./Dockerfile
     plan: free
     region: oregon
     envVars:
