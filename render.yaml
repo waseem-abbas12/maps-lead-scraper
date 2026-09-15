@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: maps-lead-scraper
+    env: docker
+    plan: free
+    region: oregon
+    envVars:
+      - key: ADMIN_USERNAME
+        value: admin
+      - key: ADMIN_PASSWORD
+        value: leads@secret2026
+      - key: SECRET_KEY
+        value: super-secret-key-prod-998811
+      - key: PORT
+        value: 8000
