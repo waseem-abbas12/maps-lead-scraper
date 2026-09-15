@@ -2,11 +2,12 @@ FROM python:3.11-slim
 
 ENV PYTHONUNBUFFERED=1 \
     DEBIAN_FRONTEND=noninteractive \
-    PORT=8000
+    PORT=7860 \
+    PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
 WORKDIR /app
 
-# Install necessary libraries for headless Chromium
+# Install system dependencies required for headless Chromium
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     ca-certificates \
@@ -28,12 +29,22 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libasound2 \
     && rm -rf /var/lib/apt/lists/*
 
+# Set up global playwright directory accessible by non-root users
+RUN mkdir -p /ms-playwright && chmod -R 777 /ms-playwright
+
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 RUN playwright install --with-deps chromium
 
-COPY . .
+# Hugging Face Spaces runs as user 1000
+RUN useradd -m -u 1000 user && \
+    chown -R user:user /app && \
+    chmod -R 777 /app
 
-EXPOSE 8000
+COPY --chown=user:user . .
 
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+USER user
+
+EXPOSE 7860
+
+CMD ["sh", "-c", "uvicorn app:app --host 0.0.0.0 --port ${PORT:-7860}"]
