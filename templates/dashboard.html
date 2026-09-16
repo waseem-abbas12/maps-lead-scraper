@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Global Maps Lead Scraper</title>
+    <title>Dashboard - Global Maps Lead Scraper Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
         .terminal-scroll::-webkit-scrollbar { width: 6px; }
         .terminal-scroll::-webkit-scrollbar-track { background: #0f172a; }
         .terminal-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
@@ -23,7 +23,7 @@
                 </div>
                 <div>
                     <h1 class="text-base font-bold text-white leading-none">Maps Lead Scraper Pro</h1>
-                    <p class="text-xs text-emerald-400 font-medium mt-0.5">Dual Extraction: Phones + Gmails</p>
+                    <p class="text-xs text-emerald-400 font-medium mt-0.5">Multi-Platform Extraction: Maps + FB + IG + LinkedIn</p>
                 </div>
             </div>
 
@@ -75,7 +75,7 @@
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Max Leads / Query</label>
-                            <input type="number" id="maxLeadsInput" value="25" min="5" max="120"
+                            <input type="number" id="maxLeadsInput" value="25" min="5" max="150"
                                 class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
                         </div>
                         <div class="flex flex-col justify-end">
@@ -90,7 +90,7 @@
                         <button type="submit" id="startBtn"
                             class="flex-1 py-3 px-4 bg-emerald-500 hover:bg-emerald-600 active:scale-[0.98] text-white font-semibold rounded-xl shadow-lg shadow-emerald-500/20 transition flex items-center justify-center space-x-2 text-sm">
                             <span>🚀</span>
-                            <span>Start Scraping</span>
+                            <span>Start Multi-Platform Scrape</span>
                         </button>
                         <button type="button" id="stopBtn" disabled
                             class="py-3 px-4 bg-red-500/20 hover:bg-red-500/30 text-red-400 font-semibold rounded-xl border border-red-500/30 transition disabled:opacity-40 disabled:cursor-not-allowed text-sm flex items-center justify-center space-x-1">
@@ -100,10 +100,14 @@
                     </div>
                 </form>
 
-                <div class="pt-2 border-t border-slate-800">
-                    <a href="/api/download" class="w-full py-2.5 px-4 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-xl font-medium border border-slate-700 flex items-center justify-center space-x-2 transition text-sm">
+                <div class="pt-2 border-t border-slate-800 flex gap-2">
+                    <a href="/api/download" class="flex-1 py-2.5 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-xl font-medium border border-slate-700 flex items-center justify-center space-x-2 transition text-xs">
                         <span>📥</span>
-                        <span>Download Master CSV Database</span>
+                        <span>Master Database CSV</span>
+                    </a>
+                    <a href="/api/download-session" class="py-2.5 px-3 bg-slate-800 hover:bg-slate-700 text-teal-300 rounded-xl font-medium border border-slate-700 flex items-center justify-center space-x-1 transition text-xs">
+                        <span>⚡</span>
+                        <span>Session CSV</span>
                     </a>
                 </div>
             </div>
@@ -114,84 +118,185 @@
                     <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-3">
                         <h2 class="text-base font-bold text-white flex items-center space-x-2">
                             <span>💻</span>
-                            <span>Live Progress & Logs</span>
+                            <span>Live Extraction & Source Monitor</span>
                         </h2>
                         <button onclick="clearLogs()" class="text-xs text-slate-400 hover:text-slate-200">Clear</button>
                     </div>
                     <!-- Live stats cards -->
-                    <div class="grid grid-cols-3 gap-3 mb-3">
-                        <div class="bg-slate-800/60 border border-slate-800 rounded-xl p-3 text-center">
-                            <div class="text-xs text-slate-400">Session Leads</div>
-                            <div id="sessionCount" class="text-xl font-bold text-emerald-400 mt-0.5">0</div>
+                    <div class="grid grid-cols-4 gap-2.5 mb-3 text-center">
+                        <div class="bg-slate-800/60 border border-slate-800 rounded-xl p-2.5">
+                            <div class="text-[11px] text-slate-400">Session Leads</div>
+                            <div id="sessionCount" class="text-lg font-bold text-emerald-400 mt-0.5">0</div>
                         </div>
-                        <div class="bg-slate-800/60 border border-slate-800 rounded-xl p-3 text-center">
-                            <div class="text-xs text-slate-400">Emails Found</div>
-                            <div id="emailCount" class="text-xl font-bold text-teal-400 mt-0.5">0</div>
+                        <div class="bg-slate-800/60 border border-slate-800 rounded-xl p-2.5">
+                            <div class="text-[11px] text-slate-400">Phones Found</div>
+                            <div id="phoneCount" class="text-lg font-bold text-sky-400 mt-0.5">0</div>
                         </div>
-                        <div class="bg-slate-800/60 border border-slate-800 rounded-xl p-3 text-center">
-                            <div class="text-xs text-slate-400">Phones Found</div>
-                            <div id="phoneCount" class="text-xl font-bold text-sky-400 mt-0.5">0</div>
+                        <div class="bg-slate-800/60 border border-slate-800 rounded-xl p-2.5">
+                            <div class="text-[11px] text-slate-400">Emails / Gmails</div>
+                            <div id="emailCount" class="text-lg font-bold text-teal-400 mt-0.5">0</div>
+                        </div>
+                        <div class="bg-slate-800/60 border border-slate-800 rounded-xl p-2.5">
+                            <div class="text-[11px] text-slate-400">Social Extracted</div>
+                            <div id="socialCount" class="text-lg font-bold text-indigo-400 mt-0.5">0</div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Console Box -->
-                <div id="consoleBox" class="terminal-scroll flex-1 h-64 bg-slate-950 border border-slate-800/90 rounded-xl p-3.5 font-mono text-xs text-slate-300 overflow-y-auto space-y-1.5 shadow-inner">
-                    <div class="text-slate-500">// System ready. Configure search and click 'Start Scraping' to begin...</div>
+                <div id="consoleBox" class="terminal-scroll flex-1 h-60 bg-slate-950 border border-slate-800/90 rounded-xl p-3.5 font-mono text-xs text-slate-300 overflow-y-auto space-y-1.5 shadow-inner">
+                    <div class="text-slate-500">// Multi-Platform Intelligence Ready. Click 'Start Multi-Platform Scrape' to begin...</div>
                 </div>
             </div>
         </div>
 
-        <!-- Bottom: Leads Table Section -->
+        <!-- Bottom: Interactive Tabbed Section -->
         <div class="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden">
-            <div class="p-5 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                    <h2 class="text-lg font-bold text-white flex items-center space-x-2">
+            <!-- Tabs Bar -->
+            <div class="p-4 border-b border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900/90">
+                <!-- Tab Buttons -->
+                <div class="flex items-center space-x-2 overflow-x-auto pb-1 sm:pb-0">
+                    <button onclick="switchTab('master')" id="tabBtn-master"
+                        class="px-4 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-sm">
                         <span>📋</span>
-                        <span>Latest Scraped Leads</span>
-                    </h2>
-                    <p class="text-xs text-slate-400 mt-0.5">Real-time table view with instant phone and email previews</p>
+                        <span>All Leads Master</span>
+                    </button>
+                    <button onclick="switchTab('phones')" id="tabBtn-phones"
+                        class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/80 transition flex items-center space-x-2 border border-transparent">
+                        <span>📞</span>
+                        <span>Phone Numbers Hub</span>
+                    </button>
+                    <button onclick="switchTab('emails')" id="tabBtn-emails"
+                        class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/80 transition flex items-center space-x-2 border border-transparent">
+                        <span>📧</span>
+                        <span>Gmails & Emails Hub</span>
+                    </button>
+                    <button onclick="switchTab('ranking')" id="tabBtn-ranking"
+                        class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/80 transition flex items-center space-x-2 border border-transparent">
+                        <span>🏆</span>
+                        <span>GMB Rank Tracker</span>
+                    </button>
                 </div>
+
+                <!-- Search Filter & Refresh -->
                 <div class="flex items-center space-x-3">
-                    <input type="text" id="tableFilter" onkeyup="filterTable()" placeholder="Search in results..."
-                        class="px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 w-48 sm:w-64">
-                    <button onclick="fetchLeads()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-lg border border-slate-700 transition">
-                        🔄 Refresh
+                    <input type="text" id="tableFilter" onkeyup="filterCurrentTable()" placeholder="Search in table..."
+                        class="px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 w-48 sm:w-64">
+                    <button onclick="fetchLeads()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-xl border border-slate-700 transition flex items-center space-x-1">
+                        <span>🔄</span>
+                        <span>Refresh</span>
                     </button>
                 </div>
             </div>
 
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-xs border-collapse" id="leadsTable">
+            <!-- Tab Content 1: Master Leads -->
+            <div id="tabContent-master" class="overflow-x-auto">
+                <table class="w-full text-left text-xs border-collapse">
                     <thead>
                         <tr class="bg-slate-800/70 border-b border-slate-700/80 text-slate-300 uppercase tracking-wider font-semibold">
+                            <th class="py-3 px-4">Rank</th>
                             <th class="py-3 px-4">Business Name</th>
-                            <th class="py-3 px-4">Phone Number</th>
-                            <th class="py-3 px-4">Email / Gmail</th>
-                            <th class="py-3 px-4">Website</th>
                             <th class="py-3 px-4">Category</th>
-                            <th class="py-3 px-4">Rating</th>
+                            <th class="py-3 px-4">Primary Phone & Source</th>
+                            <th class="py-3 px-4">Email / Gmail & Source</th>
+                            <th class="py-3 px-4">Social Handles</th>
+                            <th class="py-3 px-4">Rating & Reviews</th>
                             <th class="py-3 px-4">Address</th>
                             <th class="py-3 px-4">Maps</th>
                         </tr>
                     </thead>
-                    <tbody id="leadsTableBody" class="divide-y divide-slate-800 text-slate-300">
-                        <tr>
-                            <td colspan="8" class="text-center py-8 text-slate-500 italic">No leads loaded yet. Click Refresh or run a search.</td>
+                    <tbody id="masterTableBody" class="divide-y divide-slate-800 text-slate-300">
+                        <tr><td colspan="9" class="text-center py-8 text-slate-500 italic">Loading leads database...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Tab Content 2: Phone Numbers Hub -->
+            <div id="tabContent-phones" class="overflow-x-auto hidden">
+                <table class="w-full text-left text-xs border-collapse">
+                    <thead>
+                        <tr class="bg-slate-800/70 border-b border-slate-700/80 text-slate-300 uppercase tracking-wider font-semibold">
+                            <th class="py-3 px-4">Rank</th>
+                            <th class="py-3 px-4">Business Name</th>
+                            <th class="py-3 px-4">Primary Phone Number</th>
+                            <th class="py-3 px-4">Primary Source</th>
+                            <th class="py-3 px-4">Social / WhatsApp Phones</th>
+                            <th class="py-3 px-4">Social Phone Source</th>
+                            <th class="py-3 px-4">Website</th>
+                            <th class="py-3 px-4">Address</th>
                         </tr>
+                    </thead>
+                    <tbody id="phonesTableBody" class="divide-y divide-slate-800 text-slate-300">
+                        <tr><td colspan="8" class="text-center py-8 text-slate-500 italic">No phone data loaded yet.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Tab Content 3: Gmails & Emails Hub -->
+            <div id="tabContent-emails" class="overflow-x-auto hidden">
+                <table class="w-full text-left text-xs border-collapse">
+                    <thead>
+                        <tr class="bg-slate-800/70 border-b border-slate-700/80 text-slate-300 uppercase tracking-wider font-semibold">
+                            <th class="py-3 px-4">Rank</th>
+                            <th class="py-3 px-4">Business Name</th>
+                            <th class="py-3 px-4">Primary Email / Gmail</th>
+                            <th class="py-3 px-4">Email Source</th>
+                            <th class="py-3 px-4">LinkedIn Owner / Lead</th>
+                            <th class="py-3 px-4">Owner Email</th>
+                            <th class="py-3 px-4">Website</th>
+                            <th class="py-3 px-4">LinkedIn Profile</th>
+                        </tr>
+                    </thead>
+                    <tbody id="emailsTableBody" class="divide-y divide-slate-800 text-slate-300">
+                        <tr><td colspan="8" class="text-center py-8 text-slate-500 italic">No email data loaded yet.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Tab Content 4: GMB Rank Tracker -->
+            <div id="tabContent-ranking" class="overflow-x-auto hidden">
+                <table class="w-full text-left text-xs border-collapse">
+                    <thead>
+                        <tr class="bg-slate-800/70 border-b border-slate-700/80 text-slate-300 uppercase tracking-wider font-semibold">
+                            <th class="py-3 px-4">GMB Rank Position</th>
+                            <th class="py-3 px-4">Target Keyword / Query</th>
+                            <th class="py-3 px-4">Business Name</th>
+                            <th class="py-3 px-4">Category</th>
+                            <th class="py-3 px-4">GMB Star Rating</th>
+                            <th class="py-3 px-4">Review Count</th>
+                            <th class="py-3 px-4">Address</th>
+                            <th class="py-3 px-4">Google Maps Link</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rankingTableBody" class="divide-y divide-slate-800 text-slate-300">
+                        <tr><td colspan="8" class="text-center py-8 text-slate-500 italic">No rank data loaded yet.</td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
     </main>
 
-    <!-- Interactive Script -->
+    <!-- Client-Side Scripts -->
     <script>
-        let isScraping = false;
+        let currentTab = 'master';
         let pollTimer = null;
-        let sessionLeads = 0;
-        let emailsFound = 0;
-        let phonesFound = 0;
+        let cachedLeads = [];
+
+        function switchTab(tabName) {
+            currentTab = tabName;
+            ['master', 'phones', 'emails', 'ranking'].forEach(t => {
+                const btn = document.getElementById('tabBtn-' + t);
+                const content = document.getElementById('tabContent-' + t);
+                if (t === tabName) {
+                    btn.className = 'px-4 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-sm';
+                    content.classList.remove('hidden');
+                } else {
+                    btn.className = 'px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/80 transition flex items-center space-x-2 border border-transparent';
+                    content.classList.add('hidden');
+                }
+            });
+            renderTables(cachedLeads);
+        }
 
         const form = document.getElementById('scrapeForm');
         const startBtn = document.getElementById('startBtn');
@@ -225,7 +330,7 @@
                     resetControls();
                     return;
                 }
-                appendLog('🚀 Task accepted by backend. Starting worker...');
+                appendLog('🚀 Multi-platform extraction task started...');
                 startPolling();
             } catch (err) {
                 alert('Connection error: ' + err.message);
@@ -236,7 +341,7 @@
         stopBtn.addEventListener('click', async () => {
             try {
                 await fetch('/api/stop', { method: 'POST' });
-                appendLog('🛑 Sent stop signal to engine...');
+                appendLog('🛑 Stop signal dispatched to worker...');
             } catch (err) {
                 console.error(err);
             }
@@ -267,22 +372,30 @@
                 const res = await fetch('/api/status');
                 const data = await res.json();
 
-                // update logs
                 if (data.new_logs && data.new_logs.length > 0) {
                     data.new_logs.forEach(l => appendLog(l));
                 }
 
                 document.getElementById('sessionCount').innerText = data.session_leads_count || 0;
-                document.getElementById('emailCount').innerText = data.emails_found_count || 0;
                 document.getElementById('phoneCount').innerText = data.phones_found_count || 0;
+                document.getElementById('emailCount').innerText = data.emails_found_count || 0;
                 document.getElementById('totalDbCount').innerText = data.total_db_leads || 0;
+
+                // count socials
+                if (data.recent_leads) {
+                    let soc = 0;
+                    data.recent_leads.forEach(l => {
+                        if (l.Facebook || l.Instagram || l.LinkedIn) soc++;
+                    });
+                    document.getElementById('socialCount').innerText = soc;
+                }
 
                 if (!data.is_running) {
                     clearInterval(pollTimer);
                     resetControls();
                     fetchLeads();
                 } else {
-                    fetchLeads(); // live update table
+                    fetchLeads();
                 }
             } catch (err) {
                 console.error(err);
@@ -300,58 +413,143 @@
         async function fetchLeads() {
             try {
                 const res = await fetch('/api/leads');
-                const leads = await res.json();
-                const tbody = document.getElementById('leadsTableBody');
-                if (!leads || leads.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="8" class="text-center py-8 text-slate-500 italic">No leads found in database.</td></tr>';
-                    return;
-                }
-
-                tbody.innerHTML = leads.map(l => {
-                    const emailBadge = (l['Email / Gmail'] && l['Email / Gmail'] !== 'Not Found')
-                        ? `<span class="bg-teal-500/20 text-teal-300 px-2 py-0.5 rounded border border-teal-500/30 font-mono font-medium">${l['Email / Gmail']}</span>`
-                        : `<span class="text-slate-500">Not Found</span>`;
-
-                    const phoneBadge = (l['Phone Number'] && l['Phone Number'] !== 'Not Found')
-                        ? `<span class="text-emerald-300 font-mono font-medium">${l['Phone Number']}</span>`
-                        : `<span class="text-slate-500">Not Found</span>`;
-
-                    const webLink = (l['Website'] && l['Website'] !== 'Not Found')
-                        ? `<a href="${l['Website']}" target="_blank" class="text-sky-400 hover:underline truncate max-w-[150px] inline-block">${l['Website']}</a>`
-                        : `<span class="text-slate-500">None</span>`;
-
-                    const mapsLink = l['Google Maps Link']
-                        ? `<a href="${l['Google Maps Link']}" target="_blank" class="text-xs text-slate-400 hover:text-white underline">View Map</a>`
-                        : '';
-
-                    return `
-                        <tr class="hover:bg-slate-800/40 transition">
-                            <td class="py-3 px-4 font-semibold text-white">${l['Business Name'] || ''}</td>
-                            <td class="py-3 px-4">${phoneBadge}</td>
-                            <td class="py-3 px-4">${emailBadge}</td>
-                            <td class="py-3 px-4">${webLink}</td>
-                            <td class="py-3 px-4 text-slate-400">${l['Category'] || 'Not Found'}</td>
-                            <td class="py-3 px-4 text-amber-300">${l['Rating'] || ''}</td>
-                            <td class="py-3 px-4 text-slate-400 truncate max-w-[200px]" title="${l['Address'] || ''}">${l['Address'] || ''}</td>
-                            <td class="py-3 px-4">${mapsLink}</td>
-                        </tr>
-                    `;
-                }).join('');
+                cachedLeads = await res.json();
+                renderTables(cachedLeads);
             } catch (err) {
                 console.error(err);
             }
         }
 
-        function filterTable() {
+        function sourceBadge(source) {
+            if (!source || source === 'None' || source === 'Not Found') return '<span class="text-slate-500">None</span>';
+            let color = 'bg-slate-800 text-slate-300 border-slate-700';
+            if (source.includes('Maps')) color = 'bg-sky-500/20 text-sky-300 border-sky-500/30';
+            else if (source.includes('Facebook')) color = 'bg-blue-500/20 text-blue-300 border-blue-500/30';
+            else if (source.includes('Instagram')) color = 'bg-pink-500/20 text-pink-300 border-pink-500/30';
+            else if (source.includes('LinkedIn')) color = 'bg-amber-500/20 text-amber-300 border-amber-500/30';
+            else if (source.includes('Website')) color = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30';
+            return `<span class="px-2 py-0.5 rounded text-[10px] font-semibold border ${color}">${source}</span>`;
+        }
+
+        function renderTables(leads) {
+            if (!leads || leads.length === 0) return;
+
+            // 1. Master Table
+            const masterTbody = document.getElementById('masterTableBody');
+            masterTbody.innerHTML = leads.map(l => {
+                const rankBadge = l['Keyword Rank'] ? `<span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/30">${l['Keyword Rank']}</span>` : '<span class="text-slate-600">-</span>';
+                const phone = l['Primary Phone'] || l['Phone Number'] || 'Not Found';
+                const phoneSrc = l['Phone Source'] || (phone !== 'Not Found' ? 'Google Maps' : 'None');
+                const email = l['Primary Email / Gmail'] || l['Email / Gmail'] || 'Not Found';
+                const emailSrc = l['Email Source'] || (email !== 'Not Found' ? 'Website' : 'None');
+
+                let socialsHtml = [];
+                if (l['Facebook'] && l['Facebook'] !== 'Not Found') socialsHtml.push(`<a href="${l['Facebook']}" target="_blank" class="text-blue-400 hover:underline">FB</a>`);
+                if (l['Instagram'] && l['Instagram'] !== 'Not Found') socialsHtml.push(`<a href="${l['Instagram']}" target="_blank" class="text-pink-400 hover:underline">IG</a>`);
+                if (l['LinkedIn'] && l['LinkedIn'] !== 'Not Found') socialsHtml.push(`<a href="${l['LinkedIn']}" target="_blank" class="text-sky-400 hover:underline">IN</a>`);
+                const socialsStr = socialsHtml.length > 0 ? socialsHtml.join(' • ') : '<span class="text-slate-500">None</span>';
+
+                return `
+                    <tr class="hover:bg-slate-800/40 transition">
+                        <td class="py-3 px-4">${rankBadge}</td>
+                        <td class="py-3 px-4 font-bold text-white">${l['Business Name'] || ''}</td>
+                        <td class="py-3 px-4 text-slate-400">${l['Category'] || 'Not Found'}</td>
+                        <td class="py-3 px-4">
+                            <div class="font-mono text-emerald-300 font-medium">${phone}</div>
+                            <div class="mt-0.5">${sourceBadge(phoneSrc)}</div>
+                        </td>
+                        <td class="py-3 px-4">
+                            <div class="font-mono text-teal-300 font-medium">${email}</div>
+                            <div class="mt-0.5">${sourceBadge(emailSrc)}</div>
+                        </td>
+                        <td class="py-3 px-4">${socialsStr}</td>
+                        <td class="py-3 px-4 text-amber-300 font-semibold">${l['GMB Rating'] || l['Rating'] || ''} <span class="text-slate-500 font-normal text-[10px]">(${l['GMB Reviews Count'] || l['Reviews Count'] || '0'})</span></td>
+                        <td class="py-3 px-4 text-slate-400 truncate max-w-[180px]" title="${l['Address'] || ''}">${l['Address'] || ''}</td>
+                        <td class="py-3 px-4"><a href="${l['Google Maps Link'] || '#'}" target="_blank" class="text-xs text-sky-400 hover:underline">Maps</a></td>
+                    </tr>
+                `;
+            }).join('');
+
+            // 2. Phone Numbers Hub
+            const phonesTbody = document.getElementById('phonesTableBody');
+            phonesTbody.innerHTML = leads.map(l => {
+                const rank = l['Keyword Rank'] || '-';
+                const pPhone = l['Primary Phone'] || l['Phone Number'] || 'Not Found';
+                const pSrc = l['Phone Source'] || (pPhone !== 'Not Found' ? 'Google Maps' : 'None');
+                const sPhone = l['Secondary Phones'] || 'Not Found';
+                const sSrc = l['Secondary Phone Sources'] || 'None';
+
+                return `
+                    <tr class="hover:bg-slate-800/40 transition">
+                        <td class="py-3 px-4 font-bold text-emerald-400">${rank}</td>
+                        <td class="py-3 px-4 font-bold text-white">${l['Business Name'] || ''}</td>
+                        <td class="py-3 px-4 font-mono font-medium text-emerald-300 text-sm">${pPhone}</td>
+                        <td class="py-3 px-4">${sourceBadge(pSrc)}</td>
+                        <td class="py-3 px-4 font-mono text-teal-300">${sPhone}</td>
+                        <td class="py-3 px-4">${sourceBadge(sSrc)}</td>
+                        <td class="py-3 px-4 truncate max-w-[150px]"><a href="${l['Website'] || '#'}" target="_blank" class="text-sky-400 hover:underline">${l['Website'] || 'None'}</a></td>
+                        <td class="py-3 px-4 text-slate-400 truncate max-w-[200px]" title="${l['Address'] || ''}">${l['Address'] || ''}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            // 3. Gmails & Emails Hub
+            const emailsTbody = document.getElementById('emailsTableBody');
+            emailsTbody.innerHTML = leads.map(l => {
+                const rank = l['Keyword Rank'] || '-';
+                const email = l['Primary Email / Gmail'] || l['Email / Gmail'] || 'Not Found';
+                const emailSrc = l['Email Source'] || (email !== 'Not Found' ? 'Website' : 'None');
+                const ownerName = l['LinkedIn Owner Name'] || 'Not Found';
+                const ownerEmail = l['LinkedIn Owner Email'] || 'Not Found';
+
+                return `
+                    <tr class="hover:bg-slate-800/40 transition">
+                        <td class="py-3 px-4 font-bold text-emerald-400">${rank}</td>
+                        <td class="py-3 px-4 font-bold text-white">${l['Business Name'] || ''}</td>
+                        <td class="py-3 px-4 font-mono font-semibold text-teal-300 text-sm">${email}</td>
+                        <td class="py-3 px-4">${sourceBadge(emailSrc)}</td>
+                        <td class="py-3 px-4 text-amber-300 font-medium">${ownerName}</td>
+                        <td class="py-3 px-4 font-mono text-emerald-300">${ownerEmail}</td>
+                        <td class="py-3 px-4 truncate max-w-[150px]"><a href="${l['Website'] || '#'}" target="_blank" class="text-sky-400 hover:underline">${l['Website'] || 'None'}</a></td>
+                        <td class="py-3 px-4">${l['LinkedIn'] && l['LinkedIn'] !== 'Not Found' ? `<a href="${l['LinkedIn']}" target="_blank" class="text-blue-400 hover:underline">View Profile</a>` : '<span class="text-slate-600">None</span>'}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            // 4. GMB Rank Tracker
+            const rankingTbody = document.getElementById('rankingTableBody');
+            rankingTbody.innerHTML = leads.map(l => {
+                const rank = l['Keyword Rank'] || '#1';
+                const query = l['Search Query'] || 'N/A';
+                const rating = l['GMB Rating'] || l['Rating'] || 'N/A';
+                const reviews = l['GMB Reviews Count'] || l['Reviews Count'] || '0';
+
+                return `
+                    <tr class="hover:bg-slate-800/40 transition">
+                        <td class="py-3 px-4 font-extrabold text-emerald-400 text-base">${rank}</td>
+                        <td class="py-3 px-4 font-medium text-sky-300">${query}</td>
+                        <td class="py-3 px-4 font-bold text-white">${l['Business Name'] || ''}</td>
+                        <td class="py-3 px-4 text-slate-400">${l['Category'] || 'Not Found'}</td>
+                        <td class="py-3 px-4 text-amber-300 font-bold">${rating}</td>
+                        <td class="py-3 px-4 text-slate-300 font-semibold">${reviews}</td>
+                        <td class="py-3 px-4 text-slate-400 truncate max-w-[200px]" title="${l['Address'] || ''}">${l['Address'] || ''}</td>
+                        <td class="py-3 px-4"><a href="${l['Google Maps Link'] || '#'}" target="_blank" class="text-sky-400 hover:underline font-medium">Maps Card</a></td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function filterCurrentTable() {
             const query = document.getElementById('tableFilter').value.toLowerCase();
-            const rows = document.querySelectorAll('#leadsTableBody tr');
+            const activeTbody = document.querySelector(`#tabContent-${currentTab} tbody`);
+            if (!activeTbody) return;
+            const rows = activeTbody.querySelectorAll('tr');
             rows.forEach(r => {
                 const text = r.textContent.toLowerCase();
                 r.style.display = text.includes(query) ? '' : 'none';
             });
         }
 
-        // Initial leads load
         fetchLeads();
     </script>
 </body>
