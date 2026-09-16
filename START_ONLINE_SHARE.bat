@@ -16,12 +16,14 @@ if %errorlevel% neq 0 (
 )
 
 echo.
-echo [2/2] Generating secure online public link...
+echo [2/2] Detecting public IP and starting secure online link...
+for /f "usebackq tokens=*" %%i in (`powershell -NoProfile -Command "(Invoke-RestMethod -Uri https://api.ipify.org)"`) do set "MY_IP=%%i"
+
 echo.
 echo ============================================================
 echo  SHARE THIS INFORMATION WITH YOUR CLIENT / USER:
 echo  1. Copy the public https://....loca.lt URL shown below
-echo  2. If it asks for Tunnel Password / IP, enter: 14.192.144.142
+echo  2. If it asks for "Tunnel Password" / "Endpoint IP", enter: %MY_IP%
 echo  3. Invitation Code: LEAD-PRO-2026
 echo ============================================================
 echo.

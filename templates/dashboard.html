@@ -520,7 +520,7 @@
             const rankingTbody = document.getElementById('rankingTableBody');
             rankingTbody.innerHTML = leads.map(l => {
                 const rank = l['Keyword Rank'] || '#1';
-                const query = l['Search Query'] || 'N/A';
+                const query = l['Target Keyword'] || l['Search Query'] || 'N/A';
                 const rating = l['GMB Rating'] || l['Rating'] || 'N/A';
                 const reviews = l['GMB Reviews Count'] || l['Reviews Count'] || '0';
 

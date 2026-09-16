@@ -8,5 +8,5 @@ echo Opening browser at http://localhost:8000 ...
 echo Default Invitation Code: LEAD-PRO-2026
 echo.
 start http://localhost:8000
-python app.py
+python server.py
 pause

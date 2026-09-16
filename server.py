@@ -180,9 +180,11 @@ async def _start_scraping_handler(req: ScrapeRequest):
 
     def append_lead(lead: dict):
         state.session_leads.append(lead)
-        if lead.get("Email / Gmail") != "Not Found":
+        email = lead.get("Primary Email / Gmail") or lead.get("Email / Gmail") or ""
+        phone = lead.get("Primary Phone") or lead.get("Phone Number") or ""
+        if email and email != "Not Found":
             state.emails_found += 1
-        if lead.get("Phone Number") != "Not Found":
+        if phone and phone != "Not Found":
             state.phones_found += 1
 
     async def worker():

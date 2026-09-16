@@ -4,3 +4,6 @@ __pycache__/
 .venv/
 env/
 Test_Verification_Leads.csv
+cloudflared.exe
+Current_Session_Leads.csv
+Test_Output_Database.csv

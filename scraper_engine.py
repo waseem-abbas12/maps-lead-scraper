@@ -199,22 +199,32 @@ def load_seen_leads(file_path):
             pass
     return seen
 
+MASTER_COLUMNS = [
+    'Keyword Rank', 'Target Keyword', 'Business Name', 'Category',
+    'Primary Phone', 'Phone Source', 'Secondary Phones', 'Secondary Phone Sources',
+    'Primary Email / Gmail', 'Email Source', 'LinkedIn Owner Name', 'LinkedIn Owner Email',
+    'Website', 'Facebook', 'Instagram', 'LinkedIn', 'Address',
+    'GMB Rating', 'GMB Reviews Count', 'Google Maps Link'
+]
+
 def save_lead(lead_data, master_file):
+    # Standardize Target Keyword vs Search Query
+    if 'Search Query' in lead_data and 'Target Keyword' not in lead_data:
+        lead_data['Target Keyword'] = lead_data['Search Query']
     df = pd.DataFrame([lead_data])
     file_exists = os.path.exists(master_file)
     if not file_exists:
+        cols = [c for c in MASTER_COLUMNS if c in df.columns] + [c for c in df.columns if c not in MASTER_COLUMNS]
+        df = df.reindex(columns=cols, fill_value='Not Found')
         df.to_csv(master_file, index=False, header=True, encoding='utf-8-sig')
     else:
         try:
             existing_cols = pd.read_csv(master_file, nrows=0).columns.tolist()
-            if 'Keyword Rank' not in existing_cols:
-                old_df = pd.read_csv(master_file)
-                merged = pd.concat([old_df, df], ignore_index=True)
-                merged.to_csv(master_file, index=False, encoding='utf-8-sig')
-                return
+            # Strictly align dataframe columns to the on-disk CSV header order!
+            df = df.reindex(columns=existing_cols, fill_value='Not Found')
+            df.to_csv(master_file, mode='a', index=False, header=False, encoding='utf-8-sig')
         except Exception:
-            pass
-        df.to_csv(master_file, mode='a', index=False, header=False, encoding='utf-8-sig')
+            df.to_csv(master_file, mode='a', index=False, header=False, encoding='utf-8-sig')
 
 async def run_scraper_task(niche, location, max_leads_per_query=20, use_variations=True, master_file='Master_Leads_Database.csv', log_fn=None, lead_fn=None, stop_event=None):
     def log(msg):
@@ -282,14 +292,19 @@ async def run_scraper_task(niche, location, max_leads_per_query=20, use_variatio
                     extracted_basic = []
                     for rank_idx, l in enumerate(listings[:max_leads_per_query], 1):
                         name = await l.get_attribute('aria-label')
+                        if not name:
+                            try:
+                                name = await l.inner_text()
+                            except Exception:
+                                name = ''
                         link = await l.get_attribute('href')
-                        if name and link:
+                        if link:
                             clean_link = link.split('?')[0].split('/data=')[0].strip()
                             if clean_link in seen_leads:
                                 continue
                             extracted_basic.append({
                                 'rank': f'#{rank_idx}',
-                                'name': name.strip(),
+                                'name': name.strip() if name else '',
                                 'link': link.strip(),
                                 'clean_link': clean_link
                             })
@@ -304,6 +319,19 @@ async def run_scraper_task(niche, location, max_leads_per_query=20, use_variatio
                         try:
                             await page.goto(item['link'], timeout=30000)
                             await page.wait_for_timeout(1500)
+
+                            # 0. Business Name (Extract authoritative H1 from place detail page)
+                            b_name = item.get('name', '').strip()
+                            try:
+                                title_loc = page.locator('h1.DUwDvf, h1.fontHeadlineLarge, div[role="main"] h1, h1').first
+                                if await title_loc.count() > 0:
+                                    h1_text = (await title_loc.inner_text()).strip()
+                                    if h1_text:
+                                        b_name = h1_text
+                            except Exception:
+                                pass
+                            if not b_name:
+                                b_name = 'Unknown Business'
 
                             # 1. Primary Phone (Google Maps)
                             phone = 'Not Found'
@@ -409,8 +437,8 @@ async def run_scraper_task(niche, location, max_leads_per_query=20, use_variatio
 
                             lead = {
                                 'Keyword Rank': item['rank'],
-                                'Search Query': query,
-                                'Business Name': item['name'],
+                                'Target Keyword': query,
+                                'Business Name': b_name,
                                 'Category': category,
                                 'Primary Phone': phone,
                                 'Phone Source': phone_source,
@@ -433,12 +461,12 @@ async def run_scraper_task(niche, location, max_leads_per_query=20, use_variatio
                             save_lead(lead, master_file)
                             seen_leads.add(item['clean_link'])
                             if phone != 'Not Found':
-                                seen_leads.add(f"{item['name'].lower()}::{phone}")
+                                seen_leads.add(f"{b_name.lower()}::{phone}")
 
                             if lead_fn:
                                 lead_fn(lead)
 
-                            log(f"✔️ [{item['rank']}] {item['name']} | 📞 {phone} ({phone_source}) | 📧 {primary_email} ({primary_email_source})")
+                            log(f"✔️ [{item['rank']}] {b_name} | 📞 {phone} ({phone_source}) | 📧 {primary_email} ({primary_email_source})")
 
                         except Exception as e:
                             continue
