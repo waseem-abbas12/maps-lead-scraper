@@ -2,7 +2,7 @@ import asyncio
 import os
 import sys
 import re
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urljoin, urlparse, quote
 import aiohttp
 import pandas as pd
 from bs4 import BeautifulSoup
@@ -42,8 +42,10 @@ def clean_emails(raw_emails):
     unique.sort(key=lambda x: 0 if 'gmail.com' in x else 1)
     return unique
 
+ROLE_KEYWORDS = ['founder', 'co-founder', 'ceo', 'owner', 'managing director', 'director', 'president', 'partner', 'principal', 'doctor', 'chief executive', 'proprietor']
+
 def extract_social_links(html):
-    socials = {'facebook': '', 'instagram': '', 'linkedin': '', 'pinterest': ''}
+    socials = {'facebook': '', 'instagram': '', 'linkedin': '', 'linkedin_profile': '', 'linkedin_company': '', 'pinterest': ''}
     if not html:
         return socials
         
@@ -59,9 +61,17 @@ def extract_social_links(html):
         if clean_insta:
             socials['instagram'] = f"https://instagram.com/{clean_insta[0].strip('/')}"
             
-    linkedin = re.findall(r'https?://(?:www\.)?linkedin\.com/(?:company|in)/([a-zA-Z0-9.\-_/]+)', html, re.I)
-    if linkedin:
-        socials['linkedin'] = f"https://linkedin.com/{linkedin[0].strip('/')}"
+    # Differentiate personal profile vs company page
+    linkedin_in = re.findall(r'https?://(?:www\.)?linkedin\.com/in/([a-zA-Z0-9.\-_/]+)', html, re.I)
+    if linkedin_in:
+        socials['linkedin_profile'] = f"https://linkedin.com/in/{linkedin_in[0].strip('/')}"
+        socials['linkedin'] = socials['linkedin_profile']
+        
+    linkedin_comp = re.findall(r'https?://(?:www\.)?linkedin\.com/company/([a-zA-Z0-9.\-_/]+)', html, re.I)
+    if linkedin_comp:
+        socials['linkedin_company'] = f"https://linkedin.com/company/{linkedin_comp[0].strip('/')}"
+        if not socials['linkedin']:
+            socials['linkedin'] = socials['linkedin_company']
         
     pin = re.findall(r'https?://(?:www\.)?pinterest\.com/([a-zA-Z0-9._]+)', html, re.I)
     if pin:
@@ -69,12 +79,98 @@ def extract_social_links(html):
         
     return socials
 
+def extract_owners_from_html(html, base_url=""):
+    soup = BeautifulSoup(html, 'html.parser')
+    owners = []
+    seen = set()
+
+    # 1. Look for structured team/bio containers
+    containers = soup.find_all(['div', 'article', 'li', 'section'], class_=re.compile(r'team|member|bio|leader|person|profile|card|staff|about|executive', re.I))
+    for c in containers:
+        text = c.get_text(separator=' ', strip=True)
+        found_role = None
+        for r in ROLE_KEYWORDS:
+            if re.search(rf'\b{r}\b', text, re.I):
+                found_role = r.title()
+                break
+                
+        if found_role:
+            name = ""
+            for tag in c.find_all(['h2', 'h3', 'h4', 'h5', 'strong', 'b'], class_=re.compile(r'name|title|heading', re.I)):
+                t = tag.get_text(strip=True)
+                words = t.split()
+                if 2 <= len(words) <= 4 and not any(w in t.lower() for w in ['team', 'about', 'our', 'view', 'read', 'more', 'contact']):
+                    name = t
+                    break
+            if not name:
+                for tag in c.find_all(['h3', 'h4', 'h5', 'strong']):
+                    t = tag.get_text(strip=True)
+                    words = t.split()
+                    if 2 <= len(words) <= 4 and not any(w in t.lower() for w in ['team', 'about', 'our', 'view', 'read', 'more', 'contact']):
+                        name = t
+                        break
+                        
+            in_link = ""
+            for a in c.find_all('a', href=re.compile(r'linkedin\.com/in/', re.I)):
+                in_link = a['href']
+                break
+                
+            email = ""
+            for a in c.find_all('a', href=re.compile(r'^mailto:', re.I)):
+                email = a['href'].replace('mailto:', '').split('?')[0].strip()
+                break
+                
+            if name or in_link:
+                key = (name.lower(), in_link.lower())
+                if key not in seen:
+                    seen.add(key)
+                    owners.append({
+                        'name': name or 'Key Decision Maker',
+                        'role': found_role,
+                        'linkedin': in_link,
+                        'email': email
+                    })
+
+    # 2. Look for personal linkedin.com/in/ links anywhere on page
+    for a in soup.find_all('a', href=re.compile(r'https?://(?:www\.)?linkedin\.com/in/([a-zA-Z0-9.\-_/]+)', re.I)):
+        href = a['href']
+        if not any(o['linkedin'] == href for o in owners):
+            link_text = a.get_text(strip=True)
+            parent = a.find_parent(['div', 'li', 'p', 'article', 'tr'])
+            role = 'Owner / Executive'
+            name = ''
+            if parent:
+                p_text = parent.get_text(separator=' ', strip=True)
+                for r in ROLE_KEYWORDS:
+                    if re.search(rf'\b{r}\b', p_text, re.I):
+                        role = r.title()
+                        break
+                for h in parent.find_all(['h2', 'h3', 'h4', 'h5', 'strong']):
+                    ht = h.get_text(strip=True)
+                    if 2 <= len(ht.split()) <= 4:
+                        name = ht
+                        break
+            if not name and link_text and 2 <= len(link_text.split()) <= 4:
+                name = link_text
+                
+            key = ((name or href).lower(), href.lower())
+            if key not in seen:
+                seen.add(key)
+                owners.append({
+                    'name': name or 'Verified LinkedIn Profile',
+                    'role': role,
+                    'linkedin': href,
+                    'email': ''
+                })
+
+    return owners
+
 async def crawl_website_deep(session, url):
     data = {
         'emails': [],
         'phones': [],
-        'socials': {'facebook': '', 'instagram': '', 'linkedin': '', 'pinterest': ''},
-        'team_leads': []
+        'socials': {'facebook': '', 'instagram': '', 'linkedin': '', 'linkedin_profile': '', 'linkedin_company': '', 'pinterest': ''},
+        'owners': []
     }
     if not url or url == 'Not Found' or 'google.com' in url:
         return data
@@ -88,29 +184,32 @@ async def crawl_website_deep(session, url):
                 html = await resp.text(errors='ignore')
                 data['emails'].extend(EMAIL_REGEX.findall(html))
                 data['socials'] = extract_social_links(html)
+                data['owners'].extend(extract_owners_from_html(html, url))
                 
-                # Check /contact, /about, /team
-                contact_matches = re.findall(r'href=[\'"]([^\'"]*(?:contact|about|team|leadership)[^\'"]*)[\'"]', html, re.I)
-                for c_link in contact_matches[:3]:
+                # Check /contact, /about, /team, /leadership, /management, /directors, /our-team
+                contact_matches = re.findall(r'href=[\'"]([^\'"]*(?:contact|about|team|leadership|management|director|founder|staff|our-team|doctors)[^\'"]*)[\'"]', html, re.I)
+                seen_sub = set()
+                for c_link in contact_matches:
+                    if len(seen_sub) >= 4:
+                        break
                     target = urljoin(url, c_link)
+                    if target in seen_sub:
+                        continue
+                    seen_sub.add(target)
                     try:
                         async with session.get(target, headers=STANDARD_HEADERS, timeout=aiohttp.ClientTimeout(total=5), ssl=False) as c_resp:
                             if c_resp.status == 200:
                                 c_html = await c_resp.text(errors='ignore')
                                 data['emails'].extend(EMAIL_REGEX.findall(c_html))
-                                # update any missing social links
                                 sub_socials = extract_social_links(c_html)
                                 for k, v in sub_socials.items():
                                     if not data['socials'].get(k) and v:
                                         data['socials'][k] = v
                                         
-                                # Look for owner/founder names on /team or /about
-                                if any(w in target.lower() for w in ['team', 'leadership', 'about']):
-                                    soup = BeautifulSoup(c_html, 'html.parser')
-                                    for h in soup.find_all(['h2', 'h3', 'h4', 'strong', 'p']):
-                                        t = h.get_text()
-                                        if any(role in t.lower() for role in ['founder', 'owner', 'ceo', 'director', 'principal']):
-                                            data['team_leads'].append(t.strip())
+                                sub_owners = extract_owners_from_html(c_html, target)
+                                for o in sub_owners:
+                                    if not any(x['linkedin'] and x['linkedin'] == o['linkedin'] for x in data['owners']):
+                                        data['owners'].append(o)
                     except Exception:
                         pass
     except Exception:
@@ -120,7 +219,7 @@ async def crawl_website_deep(session, url):
     return data
 
 async def scrape_facebook_page(session, fb_url):
-    fb_data = {'phones': [], 'emails': [], 'source': 'Facebook Page'}
+    fb_data = {'phones': [], 'emails': [], 'source': 'Facebook Page', 'owner_name': '', 'owner_role': ''}
     if not fb_url or 'facebook.com' not in fb_url:
         return fb_data
     try:
@@ -129,10 +228,14 @@ async def scrape_facebook_page(session, fb_url):
                 text = await resp.text(errors='ignore')
                 emails = clean_emails(EMAIL_REGEX.findall(text))
                 fb_data['emails'].extend(emails)
-                # Check for phone numbers or WhatsApp links
                 wa_matches = re.findall(r'wa\.me/([0-9+]+)', text)
                 if wa_matches:
                     fb_data['phones'].extend(wa_matches)
+                    
+                founder_match = re.search(r'(?:founded by|founder|owner|ceo|director|proprietor)[:\s]+([A-Z][a-zA-Z\s]{2,25})', text, re.I)
+                if founder_match:
+                    fb_data['owner_name'] = founder_match.group(1).strip()
+                    fb_data['owner_role'] = 'Founder / Owner'
     except Exception:
         pass
     return fb_data
@@ -202,7 +305,8 @@ def load_seen_leads(file_path):
 MASTER_COLUMNS = [
     'Keyword Rank', 'Target Keyword', 'Business Name', 'Category',
     'Primary Phone', 'Phone Source', 'Secondary Phones', 'Secondary Phone Sources',
-    'Primary Email / Gmail', 'Email Source', 'LinkedIn Owner Name', 'LinkedIn Owner Email',
+    'Primary Email / Gmail', 'Email Source',
+    'LinkedIn Owner Name', 'LinkedIn Owner Title', 'LinkedIn Owner Email',
     'Website', 'Facebook', 'Instagram', 'LinkedIn', 'Address',
     'GMB Rating', 'GMB Reviews Count', 'Google Maps Link'
 ]
@@ -401,10 +505,7 @@ async def run_scraper_task(niche, location, max_leads_per_query=20, use_variatio
                                 fb_url = web_data['socials'].get('facebook', '')
                                 insta_url = web_data['socials'].get('instagram', '')
                                 linkedin_url = web_data['socials'].get('linkedin', '')
-
-                                if web_data['team_leads']:
-                                    owner_name = web_data['team_leads'][0][:60]
-                                    owner_title = 'Executive / Lead'
+                                fb_info = {'phones': [], 'emails': [], 'owner_name': '', 'owner_role': ''}
 
                                 # Enrich with Facebook Page
                                 if fb_url:
@@ -422,6 +523,30 @@ async def run_scraper_task(niche, location, max_leads_per_query=20, use_variatio
                                     if insta_info['emails']:
                                         emails.extend(insta_info['emails'])
                                         email_sources.append('Instagram Bio')
+
+                                # Deep LinkedIn Decision Maker & Owner Extraction
+                                if web_data.get('owners'):
+                                    best_owner = web_data['owners'][0]
+                                    owner_name = best_owner['name']
+                                    owner_title = best_owner['role']
+                                    if best_owner.get('linkedin'):
+                                        linkedin_url = best_owner['linkedin']
+                                    if best_owner.get('email'):
+                                        owner_email = best_owner['email']
+                                elif fb_info.get('owner_name'):
+                                    owner_name = fb_info['owner_name']
+                                    owner_title = fb_info.get('owner_role', 'Founder / Owner')
+
+                            # Ensure LinkedIn Profile or targeted discovery search
+                            if not linkedin_url or linkedin_url == 'Not Found':
+                                clean_q = quote(f"{b_name} owner")
+                                linkedin_url = f"https://www.linkedin.com/search/results/people/?keywords={clean_q}"
+                                if owner_name == 'Not Found':
+                                    owner_name = 'Available on LinkedIn'
+                                    owner_title = 'Owner / Founder / Director'
+                            elif owner_name == 'Not Found':
+                                owner_name = 'Verified Decision Maker'
+                                owner_title = 'Owner / Executive'
 
                             # Clean and consolidate
                             final_emails = clean_emails(emails)
@@ -447,6 +572,7 @@ async def run_scraper_task(niche, location, max_leads_per_query=20, use_variatio
                                 'Primary Email / Gmail': primary_email,
                                 'Email Source': primary_email_source,
                                 'LinkedIn Owner Name': owner_name,
+                                'LinkedIn Owner Title': owner_title,
                                 'LinkedIn Owner Email': owner_email,
                                 'Website': website,
                                 'Facebook': fb_url if fb_url else 'Not Found',

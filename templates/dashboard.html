@@ -123,7 +123,7 @@
                         <button onclick="clearLogs()" class="text-xs text-slate-400 hover:text-slate-200">Clear</button>
                     </div>
                     <!-- Live stats cards -->
-                    <div class="grid grid-cols-4 gap-2.5 mb-3 text-center">
+                    <div class="grid grid-cols-2 sm:grid-cols-5 gap-2.5 mb-3 text-center">
                         <div class="bg-slate-800/60 border border-slate-800 rounded-xl p-2.5">
                             <div class="text-[11px] text-slate-400">Session Leads</div>
                             <div id="sessionCount" class="text-lg font-bold text-emerald-400 mt-0.5">0</div>
@@ -135,6 +135,10 @@
                         <div class="bg-slate-800/60 border border-slate-800 rounded-xl p-2.5">
                             <div class="text-[11px] text-slate-400">Emails / Gmails</div>
                             <div id="emailCount" class="text-lg font-bold text-teal-400 mt-0.5">0</div>
+                        </div>
+                        <div class="bg-slate-800/60 border border-slate-800 rounded-xl p-2.5">
+                            <div class="text-[11px] text-slate-400">LinkedIn Owners</div>
+                            <div id="ownerCount" class="text-lg font-bold text-amber-400 mt-0.5">0</div>
                         </div>
                         <div class="bg-slate-800/60 border border-slate-800 rounded-xl p-2.5">
                             <div class="text-[11px] text-slate-400">Social Extracted</div>
@@ -170,6 +174,11 @@
                         class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/80 transition flex items-center space-x-2 border border-transparent">
                         <span>📧</span>
                         <span>Gmails & Emails Hub</span>
+                    </button>
+                    <button onclick="switchTab('linkedin')" id="tabBtn-linkedin"
+                        class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/80 transition flex items-center space-x-2 border border-transparent">
+                        <span>💼</span>
+                        <span>LinkedIn Owners Hub</span>
                     </button>
                     <button onclick="switchTab('ranking')" id="tabBtn-ranking"
                         class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/80 transition flex items-center space-x-2 border border-transparent">
@@ -253,6 +262,28 @@
                 </table>
             </div>
 
+            <!-- Tab Content 4: LinkedIn Owners & Decision Makers Hub -->
+            <div id="tabContent-linkedin" class="overflow-x-auto hidden">
+                <table class="w-full text-left text-xs border-collapse">
+                    <thead>
+                        <tr class="bg-slate-800/70 border-b border-slate-700/80 text-slate-300 uppercase tracking-wider font-semibold">
+                            <th class="py-3 px-4">Rank</th>
+                            <th class="py-3 px-4">Business Name</th>
+                            <th class="py-3 px-4">Decision Maker / Owner</th>
+                            <th class="py-3 px-4">Designation / Role</th>
+                            <th class="py-3 px-4">LinkedIn Profile & Action</th>
+                            <th class="py-3 px-4">Direct Email / Gmail</th>
+                            <th class="py-3 px-4">Phone / WhatsApp</th>
+                            <th class="py-3 px-4">Company Website</th>
+                            <th class="py-3 px-4">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="linkedinTableBody" class="divide-y divide-slate-800 text-slate-300">
+                        <tr><td colspan="9" class="text-center py-8 text-slate-500 italic">No LinkedIn owner data loaded yet.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
             <!-- Tab Content 4: GMB Rank Tracker -->
             <div id="tabContent-ranking" class="overflow-x-auto hidden">
                 <table class="w-full text-left text-xs border-collapse">
@@ -284,7 +315,7 @@
 
         function switchTab(tabName) {
             currentTab = tabName;
-            ['master', 'phones', 'emails', 'ranking'].forEach(t => {
+            ['master', 'phones', 'emails', 'linkedin', 'ranking'].forEach(t => {
                 const btn = document.getElementById('tabBtn-' + t);
                 const content = document.getElementById('tabContent-' + t);
                 if (t === tabName) {
@@ -379,6 +410,9 @@
                 document.getElementById('sessionCount').innerText = data.session_leads_count || 0;
                 document.getElementById('phoneCount').innerText = data.phones_found_count || 0;
                 document.getElementById('emailCount').innerText = data.emails_found_count || 0;
+                if (document.getElementById('ownerCount')) {
+                    document.getElementById('ownerCount').innerText = data.owners_found_count || 0;
+                }
                 document.getElementById('totalDbCount').innerText = data.total_db_leads || 0;
 
                 // count socials
@@ -516,7 +550,65 @@
                 `;
             }).join('');
 
-            // 4. GMB Rank Tracker
+            // 4. LinkedIn Owners & Decision Makers Hub
+            const linkedinTbody = document.getElementById('linkedinTableBody');
+            if (linkedinTbody) {
+                linkedinTbody.innerHTML = leads.map(l => {
+                    const rank = l['Keyword Rank'] || '-';
+                    const bName = l['Business Name'] || '';
+                    const ownerName = l['LinkedIn Owner Name'] || 'Available on LinkedIn';
+                    const ownerTitle = l['LinkedIn Owner Title'] || 'Owner / Founder / Director';
+                    const ownerEmail = (l['LinkedIn Owner Email'] && l['LinkedIn Owner Email'] !== 'Not Found') 
+                                        ? l['LinkedIn Owner Email'] 
+                                        : (l['Primary Email / Gmail'] && l['Primary Email / Gmail'] !== 'Not Found' ? l['Primary Email / Gmail'] : 'Not Found');
+                    const phone = l['Primary Phone'] || l['Phone Number'] || 'Not Found';
+                    const website = l['Website'] || '';
+                    
+                    let inUrl = l['LinkedIn'] || '';
+                    let isVerified = false;
+                    if (inUrl && inUrl.includes('linkedin.com/in/')) {
+                        isVerified = true;
+                    } else if (inUrl && inUrl.includes('linkedin.com/company/')) {
+                        // Keep company URL
+                    } else if (!inUrl || inUrl === 'Not Found') {
+                        inUrl = `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(bName + ' owner')}`;
+                    }
+
+                    const actionBtn = isVerified
+                        ? `<a href="${inUrl}" target="_blank" class="inline-flex items-center space-x-1 px-3 py-1.5 rounded-lg bg-blue-600/30 text-blue-300 hover:bg-blue-600 hover:text-white border border-blue-500/40 text-xs font-semibold transition shadow-sm">
+                                <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>
+                                <span>Direct Profile</span>
+                           </a>`
+                        : `<a href="${inUrl}" target="_blank" class="inline-flex items-center space-x-1 px-3 py-1.5 rounded-lg bg-slate-800 text-sky-400 hover:bg-sky-600 hover:text-white border border-slate-700 text-xs font-medium transition shadow-sm">
+                                <span>🔍</span>
+                                <span>Find Owner</span>
+                           </a>`;
+
+                    const statusBadge = isVerified
+                        ? `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">🟢 Verified Direct</span>`
+                        : `<span class="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-800 text-slate-400 border border-slate-700">🔍 1-Click Search</span>`;
+
+                    return `
+                        <tr class="hover:bg-slate-800/40 transition">
+                            <td class="py-3 px-4 font-bold text-emerald-400">${rank}</td>
+                            <td class="py-3 px-4 font-bold text-white">${bName}</td>
+                            <td class="py-3 px-4 text-amber-300 font-bold text-sm">
+                                <div>${ownerName}</div>
+                            </td>
+                            <td class="py-3 px-4">
+                                <span class="px-2 py-0.5 rounded text-[11px] font-medium bg-amber-500/10 text-amber-300 border border-amber-500/20">${ownerTitle}</span>
+                            </td>
+                            <td class="py-3 px-4">${actionBtn}</td>
+                            <td class="py-3 px-4 font-mono text-teal-300 font-medium">${ownerEmail}</td>
+                            <td class="py-3 px-4 font-mono text-emerald-300">${phone}</td>
+                            <td class="py-3 px-4 truncate max-w-[140px]"><a href="${website || '#'}" target="_blank" class="text-sky-400 hover:underline">${website ? 'Website' : 'None'}</a></td>
+                            <td class="py-3 px-4">${statusBadge}</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+
+            // 5. GMB Rank Tracker
             const rankingTbody = document.getElementById('rankingTableBody');
             rankingTbody.innerHTML = leads.map(l => {
                 const rank = l['Keyword Rank'] || '#1';

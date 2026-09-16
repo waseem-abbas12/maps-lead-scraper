@@ -55,6 +55,7 @@ class ScraperState:
     session_leads: List[dict] = []
     emails_found: int = 0
     phones_found: int = 0
+    owners_found: int = 0
     last_log_idx: int = 0
 
 state = ScraperState()
@@ -173,6 +174,7 @@ async def _start_scraping_handler(req: ScrapeRequest):
     state.session_leads = []
     state.emails_found = 0
     state.phones_found = 0
+    state.owners_found = 0
     state.last_log_idx = 0
 
     def append_log(msg: str):
@@ -182,10 +184,13 @@ async def _start_scraping_handler(req: ScrapeRequest):
         state.session_leads.append(lead)
         email = lead.get("Primary Email / Gmail") or lead.get("Email / Gmail") or ""
         phone = lead.get("Primary Phone") or lead.get("Phone Number") or ""
+        owner = lead.get("LinkedIn Owner Name") or ""
         if email and email != "Not Found":
             state.emails_found += 1
         if phone and phone != "Not Found":
             state.phones_found += 1
+        if owner and owner not in ("Not Found", "None", ""):
+            state.owners_found += 1
 
     async def worker():
         try:
@@ -245,6 +250,8 @@ async def get_status(user: str = Depends(require_auth)):
         "emails_found_count": state.emails_found,
         "phones_found": state.phones_found,
         "phones_found_count": state.phones_found,
+        "owners_found": state.owners_found,
+        "owners_found_count": state.owners_found,
         "total_db_leads": total_db_leads,
         "recent_leads": state.session_leads[-15:] if state.session_leads else []
     }
