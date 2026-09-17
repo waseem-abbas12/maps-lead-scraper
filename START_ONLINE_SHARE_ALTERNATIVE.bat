@@ -1,7 +1,7 @@
 @echo off
-title Maps Lead Scraper - Online Live Share
+title Maps Lead Scraper - Online Share (Alternative)
 echo ============================================================
-echo       Maps Lead Scraper - Starting Web Server & Live URL...
+echo       Maps Lead Scraper - Starting Alternative Live Tunnel
 echo ============================================================
 echo.
 
@@ -16,14 +16,12 @@ if %errorlevel% neq 0 (
 )
 
 echo.
-echo [2/2] Starting Cloudflare Live Tunnel (No password needed!)...
+echo [2/2] Generating 100% Working Live Link...
 echo.
 echo ============================================================
-echo  SHARE THE LINK WITH YOUR FRIEND:
-echo  1. Copy the https://....trycloudflare.com link shown below
-echo  2. Your friend can open it directly on mobile or PC!
-echo  (NOTE: Keep this window open on your PC while your friend is using it)
+echo  SHARE THE https://....lhr.life LINK SHOWN BELOW WITH YOUR FRIEND:
+echo  (NOTE: Keep this window OPEN on your PC while they use it!)
 echo ============================================================
 echo.
-cloudflared.exe tunnel --url http://localhost:8000
+ssh -o StrictHostKeyChecking=no -R 80:localhost:8000 nokey@localhost.run
 pause
