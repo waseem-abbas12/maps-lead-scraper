@@ -17,17 +17,18 @@
       ]
     }
   },
-  "updateContentCommand": "[ -f packages.txt ] && sudo apt update && sudo apt upgrade -y && sudo xargs apt install -y <packages.txt; [ -f requirements.txt ] && pip3 install --user -r requirements.txt; pip3 install --user streamlit; echo '✅ Packages installed and Requirements met'",
+  "updateContentCommand": "sudo apt update && sudo xargs -a packages.txt apt install -y && pip3 install -r requirements.txt && python3 -m playwright install chromium && echo '✅ Requirements & Chromium installed'",
   "postAttachCommand": {
-    "server": "streamlit run scraper.py --server.enableCORS false --server.enableXsrfProtection false"
+    "server": "python3 server.py"
   },
   "portsAttributes": {
-    "8501": {
-      "label": "Application",
-      "onAutoForward": "openPreview"
+    "8000": {
+      "label": "Maps Lead Scraper Portal",
+      "onAutoForward": "openPreview",
+      "visibility": "public"
     }
   },
   "forwardPorts": [
-    8501
+    8000
   ]
 }
