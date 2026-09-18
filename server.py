@@ -11,6 +11,7 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 
 import scraper_engine
+import linkedin_engine
 
 load_dotenv()
 
@@ -18,6 +19,7 @@ ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "leads@secret2026")
 SECRET_KEY = os.getenv("SECRET_KEY", "super-secret-leads-key-998811")
 MASTER_FILE = os.getenv("MASTER_FILE", "Master_Leads_Database.csv")
+LINKEDIN_MASTER_FILE = os.getenv("LINKEDIN_MASTER_FILE", "LinkedIn_Leads_Database.csv")
 
 def get_allowed_keys() -> set:
     keys = set()
@@ -59,6 +61,18 @@ class ScraperState:
     last_log_idx: int = 0
 
 state = ScraperState()
+
+class LinkedInState:
+    is_running: bool = False
+    stop_event: Optional[asyncio.Event] = None
+    task: Optional[asyncio.Task] = None
+    logs: List[str] = []
+    session_leads: List[dict] = []
+    emails_found: int = 0
+    phones_found: int = 0
+    last_log_idx: int = 0
+
+linkedin_state = LinkedInState()
 
 def get_current_user(request: Request) -> Optional[str]:
     cookie = request.cookies.get("lead_auth_session")
@@ -145,9 +159,17 @@ async def dashboard(request: Request, user: str = Depends(require_auth)):
             total_leads = len(df)
         except Exception:
             pass
+    total_linkedin_leads = 0
+    if os.path.exists(LINKEDIN_MASTER_FILE):
+        try:
+            ldf = pd.read_csv(LINKEDIN_MASTER_FILE)
+            total_linkedin_leads = len(ldf)
+        except Exception:
+            pass
     return templates.TemplateResponse(request=request, name="dashboard.html", context={
         "username": user,
-        "total_leads": total_leads
+        "total_leads": total_leads,
+        "total_linkedin_leads": total_linkedin_leads
     })
 
 class ScrapeRequest(BaseModel):
@@ -289,6 +311,117 @@ async def download_csv(user: str = Depends(require_auth)):
         filename="Master_Leads_Database.csv",
         media_type="text/csv"
     )
+
+# ==========================================
+# DEDICATED LINKEDIN SCRAPER ENDPOINTS
+# ==========================================
+
+class LinkedInScrapeRequest(BaseModel):
+    role: str = ""
+    industry: str = ""
+    location: str = ""
+    company: Optional[str] = ""
+    max_leads: int = 25
+    extract_emails: bool = True
+
+@app.post("/api/linkedin/start")
+async def start_linkedin_scraping(req: LinkedInScrapeRequest, user: str = Depends(require_auth)):
+    if linkedin_state.is_running:
+        return {"status": "already_running", "message": "A LinkedIn scrape job is already active."}
+
+    linkedin_state.is_running = True
+    linkedin_state.stop_event = asyncio.Event()
+    linkedin_state.logs = []
+    linkedin_state.session_leads = []
+    linkedin_state.emails_found = 0
+    linkedin_state.phones_found = 0
+    linkedin_state.last_log_idx = 0
+
+    def append_log(msg: str):
+        linkedin_state.logs.append(msg)
+
+    def append_lead(lead: dict):
+        linkedin_state.session_leads.append(lead)
+        email = lead.get("Email") or ""
+        phone = lead.get("Phone") or ""
+        if email and email != "Not Found":
+            linkedin_state.emails_found += 1
+        if phone and phone != "Not Found":
+            linkedin_state.phones_found += 1
+
+    async def worker():
+        try:
+            await linkedin_engine.run_linkedin_scraper(
+                role=req.role.strip(),
+                industry=req.industry.strip(),
+                location=req.location.strip(),
+                company=(req.company or "").strip(),
+                max_leads=req.max_leads,
+                extract_emails=req.extract_emails,
+                master_file=LINKEDIN_MASTER_FILE,
+                log_fn=append_log,
+                lead_fn=append_lead,
+                stop_event=linkedin_state.stop_event
+            )
+        except Exception as e:
+            append_log(f"💥 Critical Error: {str(e)}")
+        finally:
+            linkedin_state.is_running = False
+
+    linkedin_state.task = asyncio.create_task(worker())
+    return {"status": "started", "message": "LinkedIn scraper initialized successfully."}
+
+@app.get("/api/linkedin/status")
+async def get_linkedin_status(user: str = Depends(require_auth)):
+    new_logs = linkedin_state.logs[linkedin_state.last_log_idx:]
+    linkedin_state.last_log_idx = len(linkedin_state.logs)
+    return {
+        "is_running": linkedin_state.is_running,
+        "logs": new_logs,
+        "session_count": len(linkedin_state.session_leads),
+        "emails_found": linkedin_state.emails_found,
+        "phones_found": linkedin_state.phones_found,
+        "latest_leads": linkedin_state.session_leads[-10:] if linkedin_state.session_leads else []
+    }
+
+@app.post("/api/linkedin/stop")
+async def stop_linkedin_scraping(user: str = Depends(require_auth)):
+    if not linkedin_state.is_running:
+        return {"status": "not_running", "message": "No active LinkedIn scraping job."}
+    if linkedin_state.stop_event:
+        linkedin_state.stop_event.set()
+    linkedin_state.is_running = False
+    linkedin_state.logs.append("🛑 Stop requested for LinkedIn Scraper.")
+    return {"status": "stopped", "message": "LinkedIn scraper stopping..."}
+
+@app.get("/api/linkedin/leads")
+async def get_linkedin_leads(user: str = Depends(require_auth)):
+    if not os.path.exists(LINKEDIN_MASTER_FILE):
+        return []
+    try:
+        df = pd.read_csv(LINKEDIN_MASTER_FILE)
+        return df.tail(100).iloc[::-1].fillna("").to_dict(orient="records")
+    except Exception:
+        return []
+
+@app.get("/api/linkedin/download")
+async def download_linkedin_csv(user: str = Depends(require_auth)):
+    if not os.path.exists(LINKEDIN_MASTER_FILE):
+        raise HTTPException(status_code=404, detail="No LinkedIn leads database found yet.")
+    return FileResponse(
+        path=LINKEDIN_MASTER_FILE,
+        filename="LinkedIn_Leads_Database.csv",
+        media_type="text/csv"
+    )
+
+@app.get("/api/linkedin/download-session")
+async def download_linkedin_session_csv(user: str = Depends(require_auth)):
+    if not linkedin_state.session_leads:
+        raise HTTPException(status_code=400, detail="No LinkedIn leads scraped in this session yet.")
+    df = pd.DataFrame(linkedin_state.session_leads)
+    temp_file = "Current_LinkedIn_Session_Leads.csv"
+    df.to_csv(temp_file, index=False, encoding="utf-8-sig")
+    return FileResponse(path=temp_file, filename="Current_LinkedIn_Session_Leads.csv", media_type="text/csv")
 
 if __name__ == "__main__":
     import uvicorn

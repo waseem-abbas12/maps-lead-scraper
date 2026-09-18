@@ -29,8 +29,12 @@
 
             <div class="flex items-center space-x-4">
                 <div class="hidden sm:flex items-center space-x-2 bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700 text-xs">
-                    <span class="text-slate-400">Total Database Leads:</span>
+                    <span class="text-slate-400">Maps Leads:</span>
                     <span id="totalDbCount" class="font-bold text-emerald-400">{{ total_leads }}</span>
+                </div>
+                <div class="hidden sm:flex items-center space-x-2 bg-blue-900/30 px-3 py-1.5 rounded-lg border border-blue-700/50 text-xs">
+                    <span class="text-blue-300">LinkedIn Leads:</span>
+                    <span id="totalLinkedInDbCount" class="font-bold text-blue-400">{{ total_linkedin_leads }}</span>
                 </div>
                 <div class="flex items-center space-x-2 text-xs text-slate-400">
                     <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -45,8 +49,32 @@
 
     <!-- Main Container -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        <!-- Top Cards Grid -->
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- System Mode Switcher Tabs -->
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-900/90 p-2.5 rounded-2xl border border-slate-800 shadow-2xl backdrop-blur">
+            <div class="flex items-center space-x-2 w-full sm:w-auto">
+                <button id="modeBtnMaps" onclick="switchSystem('maps')"
+                    class="flex-1 sm:flex-none px-5 py-3 rounded-xl font-extrabold text-sm transition flex items-center justify-center space-x-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/25">
+                    <span>🌍</span>
+                    <span>Google Maps Local Leads</span>
+                </button>
+                <button id="modeBtnLinkedIn" onclick="switchSystem('linkedin')"
+                    class="flex-1 sm:flex-none px-5 py-3 rounded-xl font-extrabold text-sm transition flex items-center justify-center space-x-2.5 bg-slate-800/60 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/80">
+                    <span>🎯</span>
+                    <span>LinkedIn Decision Maker Scraper</span>
+                    <span class="ml-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/20 text-blue-400 border border-blue-500/30">PRO</span>
+                </button>
+            </div>
+            <div class="text-xs text-slate-400 px-3 hidden md:flex items-center space-x-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span>Active Engine: </span>
+                <span id="activeEngineText" class="font-bold text-emerald-400">Google Maps Dual Extractor</span>
+            </div>
+        </div>
+
+        <!-- SYSTEM 1: GOOGLE MAPS LOCAL LEADS WORKSPACE -->
+        <div id="systemMaps" class="space-y-8">
+            <!-- Top Cards Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
             <!-- Left: Scraper Controls (5 Cols) -->
             <div class="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-5">
                 <div class="flex items-center justify-between border-b border-slate-800 pb-4">
@@ -305,6 +333,174 @@
                 </table>
             </div>
         </div>
+        <!-- END SYSTEM 1: GOOGLE MAPS -->
+
+        <!-- SYSTEM 2: DEDICATED LINKEDIN EXECUTIVE & DECISION MAKER SCRAPER -->
+        <div id="systemLinkedIn" class="space-y-8 hidden">
+            <!-- LinkedIn Top Cards Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Left: LinkedIn Controls (5 Cols) -->
+                <div class="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-5">
+                    <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+                        <div class="flex items-center space-x-2">
+                            <span class="text-xl">🎯</span>
+                            <div>
+                                <h2 class="text-lg font-bold text-white">LinkedIn Executive Targeter</h2>
+                                <p class="text-[11px] text-blue-400 font-medium">Scrape CEOs, Founders & Owners Worldwide</p>
+                            </div>
+                        </div>
+                        <span id="liStatusBadge" class="px-2.5 py-1 text-xs font-semibold rounded-full bg-slate-800 text-slate-400 border border-slate-700">
+                            Idle
+                        </span>
+                    </div>
+
+                    <form id="liScrapeForm" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Target Job Title / Role</label>
+                            <input type="text" id="liRoleInput" placeholder="e.g. CEO, Founder, Owner, Managing Director, Partner" value="CEO"
+                                class="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Industry / Niche</label>
+                            <input type="text" id="liIndustryInput" required placeholder="e.g. Real Estate, Solar, Software, Healthcare"
+                                class="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Location / City / Country</label>
+                            <input type="text" id="liLocationInput" placeholder="e.g. Dubai, United Kingdom, USA, Lahore"
+                                class="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Company (Optional)</label>
+                                <input type="text" id="liCompanyInput" placeholder="e.g. Emaar, Tesla"
+                                    class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Max Leads</label>
+                                <input type="number" id="liMaxLeadsInput" value="25" min="5" max="150"
+                                    class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="flex items-center space-x-2 cursor-pointer pb-1">
+                                <input type="checkbox" id="liExtractEmails" checked class="w-4 h-4 text-blue-500 rounded bg-slate-800 border-slate-700 focus:ring-blue-500">
+                                <span class="text-xs text-slate-300 font-medium">Deep Email & Phone Enrichment (Gmail / Outlook / WA)</span>
+                            </label>
+                        </div>
+
+                        <div class="pt-2 flex flex-col sm:flex-row gap-3">
+                            <button type="submit" id="liStartBtn"
+                                class="flex-1 py-3 px-4 bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-600 hover:from-blue-700 hover:to-indigo-700 active:scale-[0.98] text-white font-bold rounded-xl shadow-lg shadow-blue-500/20 transition flex items-center justify-center space-x-2 text-sm">
+                                <span>🎯</span>
+                                <span>Start LinkedIn Scrape</span>
+                            </button>
+                            <button type="button" id="liStopBtn" disabled
+                                class="py-3 px-4 bg-red-500/20 hover:bg-red-500/30 text-red-400 font-semibold rounded-xl border border-red-500/30 transition disabled:opacity-40 disabled:cursor-not-allowed text-sm flex items-center justify-center space-x-1">
+                                <span>🛑</span>
+                                <span>Stop</span>
+                            </button>
+                        </div>
+                    </form>
+
+                    <div class="pt-2 border-t border-slate-800 flex gap-2">
+                        <a href="/api/linkedin/download" class="flex-1 py-2.5 px-3 bg-slate-800 hover:bg-slate-700 text-blue-300 hover:text-white rounded-xl font-medium border border-slate-700 flex items-center justify-center space-x-2 transition text-xs">
+                            <span>📥</span>
+                            <span>LinkedIn Master CSV</span>
+                        </a>
+                        <a href="/api/linkedin/download-session" class="py-2.5 px-3 bg-slate-800 hover:bg-slate-700 text-teal-300 rounded-xl font-medium border border-slate-700 flex items-center justify-center space-x-1 transition text-xs">
+                            <span>⚡</span>
+                            <span>Session CSV</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Right: LinkedIn Live Terminal & Stats (7 Cols) -->
+                <div class="lg:col-span-7 bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col justify-between space-y-4">
+                    <div>
+                        <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-3">
+                            <h2 class="text-base font-bold text-white flex items-center space-x-2">
+                                <span>💻</span>
+                                <span>LinkedIn Engine Live Stream</span>
+                            </h2>
+                            <button onclick="clearLiLogs()" class="text-xs text-slate-500 hover:text-slate-300 transition">
+                                Clear Log
+                            </button>
+                        </div>
+
+                        <!-- Terminal Box -->
+                        <div id="liConsoleBox" class="terminal-scroll h-60 bg-slate-950 border border-slate-800/80 rounded-xl p-4 font-mono text-xs text-slate-300 overflow-y-auto space-y-1.5 shadow-inner">
+                            <div class="text-blue-400">🎯 LinkedIn Decision Maker Scraper ready. Enter Role, Industry, Location and click Start.</div>
+                        </div>
+                    </div>
+
+                    <!-- Live Stats Ribbon -->
+                    <div class="grid grid-cols-3 gap-3 pt-2 border-t border-slate-800">
+                        <div class="bg-slate-800/50 p-3 rounded-xl border border-slate-700/50 text-center">
+                            <span class="block text-[11px] uppercase tracking-wider text-slate-400 font-semibold mb-1">Profiles Extracted</span>
+                            <span id="liSessionCount" class="text-xl font-extrabold text-blue-400">0</span>
+                        </div>
+                        <div class="bg-slate-800/50 p-3 rounded-xl border border-slate-700/50 text-center">
+                            <span class="block text-[11px] uppercase tracking-wider text-slate-400 font-semibold mb-1">Direct Emails</span>
+                            <span id="liEmailCount" class="text-xl font-extrabold text-teal-300">0</span>
+                        </div>
+                        <div class="bg-slate-800/50 p-3 rounded-xl border border-slate-700/50 text-center">
+                            <span class="block text-[11px] uppercase tracking-wider text-slate-400 font-semibold mb-1">Phones / WhatsApp</span>
+                            <span id="liPhoneCount" class="text-xl font-extrabold text-emerald-400">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LinkedIn Leads Data Table -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden space-y-4 p-6">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-xl bg-blue-600/20 text-blue-400 border border-blue-500/30 flex items-center justify-center font-bold text-lg">
+                            in
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-bold text-white">Extracted LinkedIn Executives & Decision Makers</h2>
+                            <p class="text-xs text-slate-400">Verified LinkedIn profiles with direct roles, companies, emails & phone numbers</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <input type="text" id="liTableFilter" oninput="filterLiTable()" placeholder="🔍 Filter by name, title, company..."
+                            class="px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 w-64">
+                        <a href="/api/linkedin/download" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-md shadow-blue-500/20">
+                            <span>📥</span>
+                            <span>Export LinkedIn CSV</span>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-slate-800/60 uppercase font-semibold text-slate-400 tracking-wider">
+                            <tr>
+                                <th class="py-3 px-4">#</th>
+                                <th class="py-3 px-4">Full Name</th>
+                                <th class="py-3 px-4">Job Title / Role</th>
+                                <th class="py-3 px-4">Company</th>
+                                <th class="py-3 px-4">Location</th>
+                                <th class="py-3 px-4">Email</th>
+                                <th class="py-3 px-4">Phone / WA</th>
+                                <th class="py-3 px-4">LinkedIn Profile</th>
+                                <th class="py-3 px-4">Summary</th>
+                            </tr>
+                        </thead>
+                        <tbody id="liTableBody" class="divide-y divide-slate-800 text-slate-300">
+                            <tr><td colspan="9" class="text-center py-10 text-slate-500 italic">No LinkedIn leads extracted yet. Configure filters and start a scrape!</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <!-- END SYSTEM 2: LINKEDIN -->
     </main>
 
     <!-- Client-Side Scripts -->
@@ -643,6 +839,219 @@
         }
 
         fetchLeads();
+
+        // ==========================================
+        // SYSTEM WORKSPACE SWITCHER
+        // ==========================================
+        let activeSystem = 'maps';
+
+        function switchSystem(system) {
+            activeSystem = system;
+            const btnMaps = document.getElementById('modeBtnMaps');
+            const btnLi = document.getElementById('modeBtnLinkedIn');
+            const sysMaps = document.getElementById('systemMaps');
+            const sysLi = document.getElementById('systemLinkedIn');
+            const engineText = document.getElementById('activeEngineText');
+
+            if (system === 'maps') {
+                btnMaps.className = 'flex-1 sm:flex-none px-5 py-3 rounded-xl font-extrabold text-sm transition flex items-center justify-center space-x-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/25';
+                btnLi.className = 'flex-1 sm:flex-none px-5 py-3 rounded-xl font-extrabold text-sm transition flex items-center justify-center space-x-2.5 bg-slate-800/60 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/80';
+                sysMaps.classList.remove('hidden');
+                sysLi.classList.add('hidden');
+                engineText.innerText = 'Google Maps Dual Extractor';
+                engineText.className = 'font-bold text-emerald-400';
+            } else {
+                btnLi.className = 'flex-1 sm:flex-none px-5 py-3 rounded-xl font-extrabold text-sm transition flex items-center justify-center space-x-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/25';
+                btnMaps.className = 'flex-1 sm:flex-none px-5 py-3 rounded-xl font-extrabold text-sm transition flex items-center justify-center space-x-2.5 bg-slate-800/60 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/80';
+                sysMaps.classList.add('hidden');
+                sysLi.classList.remove('hidden');
+                engineText.innerText = 'LinkedIn Decision Maker Matrix';
+                engineText.className = 'font-bold text-blue-400';
+                fetchLinkedInLeads();
+            }
+        }
+
+        // ==========================================
+        // LINKEDIN SCRAPER CONTROLLER
+        // ==========================================
+        let liPollTimer = null;
+        let cachedLiLeads = [];
+
+        const liForm = document.getElementById('liScrapeForm');
+        const liStartBtn = document.getElementById('liStartBtn');
+        const liStopBtn = document.getElementById('liStopBtn');
+        const liStatusBadge = document.getElementById('liStatusBadge');
+        const liConsoleBox = document.getElementById('liConsoleBox');
+
+        liForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const role = document.getElementById('liRoleInput').value;
+            const industry = document.getElementById('liIndustryInput').value;
+            const location = document.getElementById('liLocationInput').value;
+            const company = document.getElementById('liCompanyInput').value;
+            const maxLeads = parseInt(document.getElementById('liMaxLeadsInput').value) || 25;
+            const extractEmails = document.getElementById('liExtractEmails').checked;
+
+            liStartBtn.disabled = true;
+            liStartBtn.classList.add('opacity-50');
+            liStopBtn.disabled = false;
+
+            liStatusBadge.innerText = 'Extracting';
+            liStatusBadge.className = 'px-2.5 py-1 text-xs font-semibold rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30 animate-pulse';
+
+            try {
+                const res = await fetch('/api/linkedin/start', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ role, industry, location, company, max_leads: maxLeads, extract_emails: extractEmails })
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    alert(data.detail || 'Error starting LinkedIn scrape');
+                    resetLiControls();
+                    return;
+                }
+                appendLiLog('🚀 LinkedIn Executive Extractor task launched...');
+                startLiPolling();
+            } catch (err) {
+                alert('Connection error: ' + err.message);
+                resetLiControls();
+            }
+        });
+
+        liStopBtn.addEventListener('click', async () => {
+            try {
+                await fetch('/api/linkedin/stop', { method: 'POST' });
+                appendLiLog('🛑 Stop signal dispatched to LinkedIn worker...');
+            } catch (err) {
+                console.error(err);
+            }
+        });
+
+        function appendLiLog(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            if (text.includes('✨') || text.includes('🎉')) div.className = 'text-blue-300 font-semibold';
+            else if (text.includes('Email:') && !text.includes('Not Found')) div.className = 'text-teal-300 font-semibold';
+            else if (text.includes('❌') || text.includes('🛑') || text.includes('Critical')) div.className = 'text-red-400';
+            else if (text.includes('🔎') || text.includes('Scanning')) div.className = 'text-sky-300';
+            liConsoleBox.appendChild(div);
+            liConsoleBox.scrollTop = liConsoleBox.scrollHeight;
+        }
+
+        function clearLiLogs() {
+            liConsoleBox.innerHTML = '';
+        }
+
+        function startLiPolling() {
+            if (liPollTimer) clearInterval(liPollTimer);
+            liPollTimer = setInterval(pollLiStatus, 1500);
+        }
+
+        async function pollLiStatus() {
+            try {
+                const res = await fetch('/api/linkedin/status');
+                const data = await res.json();
+
+                if (data.logs && data.logs.length > 0) {
+                    data.logs.forEach(l => appendLiLog(l));
+                }
+
+                document.getElementById('liSessionCount').innerText = data.session_count || 0;
+                document.getElementById('liEmailCount').innerText = data.emails_found || 0;
+                document.getElementById('liPhoneCount').innerText = data.phones_found || 0;
+
+                if (!data.is_running) {
+                    clearInterval(liPollTimer);
+                    resetLiControls();
+                    fetchLinkedInLeads();
+                } else {
+                    fetchLinkedInLeads();
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function resetLiControls() {
+            liStartBtn.disabled = false;
+            liStartBtn.classList.remove('opacity-50');
+            liStopBtn.disabled = true;
+            liStatusBadge.innerText = 'Idle';
+            liStatusBadge.className = 'px-2.5 py-1 text-xs font-semibold rounded-full bg-slate-800 text-slate-400 border border-slate-700';
+        }
+
+        async function fetchLinkedInLeads() {
+            try {
+                const res = await fetch('/api/linkedin/leads');
+                cachedLiLeads = await res.json();
+                renderLinkedInTable(cachedLiLeads);
+                const countBadge = document.getElementById('totalLinkedInDbCount');
+                if (countBadge) countBadge.innerText = cachedLiLeads.length;
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function renderLinkedInTable(leads) {
+            const tbody = document.getElementById('liTableBody');
+            if (!leads || leads.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" class="text-center py-10 text-slate-500 italic">No LinkedIn leads in database yet. Launch your first search!</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = leads.map((l, idx) => {
+                const name = l['Full Name'] || 'LinkedIn Member';
+                const role = l['Job Title'] || 'Decision Maker';
+                const company = l['Company'] || 'Verified Organization';
+                const loc = l['Location'] || 'Worldwide';
+                const email = l['Email'] || 'Not Found';
+                const phone = l['Phone'] || 'Not Found';
+                const inUrl = l['LinkedIn Profile'] || '#';
+                const snippet = l['Snippet'] || '';
+
+                const emailHtml = email !== 'Not Found' 
+                    ? `<div class="flex items-center space-x-1.5">
+                         <span class="font-mono text-teal-300 font-semibold">${email}</span>
+                         <button onclick="navigator.clipboard.writeText('${email}'); alert('Email copied: ${email}')" title="Copy Email" class="text-slate-400 hover:text-white text-[10px] px-1 py-0.5 rounded bg-slate-800 border border-slate-700">📋</button>
+                       </div>`
+                    : `<span class="text-slate-600">Not Found</span>`;
+
+                const phoneHtml = phone !== 'Not Found'
+                    ? `<span class="font-mono text-emerald-300 font-medium">${phone}</span>`
+                    : `<span class="text-slate-600">Not Found</span>`;
+
+                return `
+                    <tr class="hover:bg-slate-800/40 transition">
+                        <td class="py-3 px-4 font-bold text-blue-400">#${idx + 1}</td>
+                        <td class="py-3 px-4 font-bold text-white">${name}</td>
+                        <td class="py-3 px-4">
+                            <span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-blue-500/10 text-blue-300 border border-blue-500/20">${role}</span>
+                        </td>
+                        <td class="py-3 px-4 font-medium text-slate-200">${company}</td>
+                        <td class="py-3 px-4 text-slate-400">${loc}</td>
+                        <td class="py-3 px-4">${emailHtml}</td>
+                        <td class="py-3 px-4">${phoneHtml}</td>
+                        <td class="py-3 px-4">
+                            <a href="${inUrl}" target="_blank" class="inline-flex items-center space-x-1 px-3 py-1.5 rounded-lg bg-blue-600/30 text-blue-300 hover:bg-blue-600 hover:text-white border border-blue-500/40 text-xs font-semibold transition shadow-sm">
+                                <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>
+                                <span>Direct Profile</span>
+                            </a>
+                        </td>
+                        <td class="py-3 px-4 text-slate-400 text-[11px] truncate max-w-[200px]" title="${snippet}">${snippet}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function filterLiTable() {
+            const query = document.getElementById('liTableFilter').value.toLowerCase();
+            const rows = document.querySelectorAll('#liTableBody tr');
+            rows.forEach(r => {
+                const text = r.textContent.toLowerCase();
+                r.style.display = text.includes(query) ? '' : 'none';
+            });
+        }
     </script>
 </body>
 </html>
